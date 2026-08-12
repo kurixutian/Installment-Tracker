@@ -73,7 +73,7 @@
       --shadow-lg: 0 24px 48px -12px rgba(0, 0, 0, 0.70);
     }
 
-    /* HARD OVERRIDE TO PREVENT TEXT WRAPPING IN TABLE HEADERS & CELLS */
+    /* PREVENT SQUEEZED TABLE HEADERS AND SINGLE CHARACTER WRAPPING */
     th, td {
       white-space: nowrap !important;
       word-break: normal !important;
@@ -429,7 +429,7 @@
                 </button>
               </div>
 
-              <!-- Controls -->
+              <!-- Filter, Search & Layout Controls -->
               <div class="glass-card rounded-3xl p-3.5 space-y-3">
                 <div class="relative w-full">
                   <i data-lucide="search" class="absolute left-3.5 top-3 h-4 w-4 text-slate-400"></i>
@@ -766,7 +766,7 @@
     </div>
   </div>
 
-  <!-- CONFIRMATION DIALOG MODAL -->
+  <!-- CONFIRMation DIALOG MODAL -->
   <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 backdrop-blur-md p-4">
     <div class="glass-modal w-full max-w-xs rounded-3xl p-5 shadow-2xl text-center">
       <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 mb-3">
@@ -866,7 +866,7 @@
             plans = migrateData(parsed);
           }
         } catch (err) {
-          console.error('Data load error, fallback to defaults:', err);
+          console.error('Data load error:', err);
           plans = starterPlans;
         }
         saveData();
@@ -874,38 +874,19 @@
 
       function migrateData(rawPlans) {
         if (!Array.isArray(rawPlans)) return starterPlans;
-
-        return rawPlans.map((p, idx) => {
-          const monthlyEstimate = p.amount && p.tenure ? (p.amount / p.tenure) : 0;
-          let payments = Array.isArray(p.payments) ? p.payments : [];
-
-          if (payments.length === 0 && typeof p.paid === 'number' && p.paid > 0) {
-            const startDate = p.startDate ? new Date(p.startDate + 'T00:00:00') : new Date();
-            for (let i = 0; i < p.paid; i++) {
-              const pDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, Math.min(p.dueDay || 15, 28));
-              payments.push({
-                id: 'migrated_' + idx + '_' + i + '_' + Date.now(),
-                amount: Math.round(monthlyEstimate * 100) / 100,
-                date: pDate.toISOString().slice(0, 10),
-                note: 'Migrated payment entry #' + (i + 1)
-              });
-            }
-          }
-
-          return {
-            id: p.id || 'plan_' + Date.now() + '_' + idx,
-            name: p.name || 'Unnamed Plan',
-            merchant: p.merchant || 'General Merchant',
-            amount: Number(p.amount) || 0,
-            tenure: Number(p.tenure) || 1,
-            startDate: p.startDate || new Date().toISOString().slice(0, 10),
-            dueDay: Number(p.dueDay) || 15,
-            status: p.status || 'active',
-            receipt: p.receipt || '',
-            productImage: p.productImage || '',
-            payments: payments
-          };
-        });
+        return rawPlans.map((p, idx) => ({
+          id: p.id || 'plan_' + Date.now() + '_' + idx,
+          name: p.name || 'Unnamed Plan',
+          merchant: p.merchant || 'General Merchant',
+          amount: Number(p.amount) || 0,
+          tenure: Number(p.tenure) || 1,
+          startDate: p.startDate || new Date().toISOString().slice(0, 10),
+          dueDay: Number(p.dueDay) || 15,
+          status: p.status || 'active',
+          receipt: p.receipt || '',
+          productImage: p.productImage || '',
+          payments: Array.isArray(p.payments) ? p.payments : []
+        }));
       }
 
       function saveData() {
@@ -925,8 +906,6 @@
         const remaining = Math.max(0, totalAmount - totalPaid);
 
         const paidInstallments = Math.min(tenure, Math.floor((totalPaid / (monthlyAmount || 1)) + 0.001));
-        const remainingInstallments = Math.max(0, tenure - paidInstallments);
-
         const progressPercent = totalAmount > 0 ? Math.min(100, Math.round((totalPaid / totalAmount) * 100)) : 0;
 
         const baseStart = p.startDate ? new Date(p.startDate + 'T00:00:00') : new Date();
@@ -935,318 +914,93 @@
         const isOverdue = p.status === 'active' && remaining > 0.01 && nextDueDate < today;
 
         let calculatedStatus = 'pending';
-        if (totalPaid >= totalAmount && totalAmount > 0) {
-          calculatedStatus = 'paid';
-        } else if (totalPaid > 0) {
-          calculatedStatus = 'partially_paid';
-        }
+        if (totalPaid >= totalAmount && totalAmount > 0) calculatedStatus = 'paid';
+        else if (totalPaid > 0) calculatedStatus = 'partially_paid';
 
-        return {
-          totalAmount,
-          tenure,
-          monthlyAmount,
-          totalPaid,
-          remaining,
-          paidInstallments,
-          remainingInstallments,
-          progressPercent,
-          nextDueDate,
-          isOverdue,
-          calculatedStatus
-        };
+        return { totalAmount, tenure, monthlyAmount, totalPaid, remaining, paidInstallments, progressPercent, nextDueDate, isOverdue, calculatedStatus };
       }
 
       function getStatusBadge(p) {
         const c = calcPlan(p);
-
-        if (p.status === 'paused') {
-          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-amber-500/15 text-amber-700 dark:text-amber-400">Paused</span>';
-        }
-        if (p.status === 'completed' || c.calculatedStatus === 'paid') {
-          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">Fully Paid</span>';
-        }
-        if (c.isOverdue) {
-          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-rose-500/15 text-rose-700 dark:text-rose-400">Overdue</span>';
-        }
-        if (c.calculatedStatus === 'partially_paid') {
-          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-400">Partially Paid</span>';
-        }
+        if (p.status === 'paused') return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-amber-500/15 text-amber-700 dark:text-amber-400">Paused</span>';
+        if (p.status === 'completed' || c.calculatedStatus === 'paid') return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">Fully Paid</span>';
+        if (c.isOverdue) return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-rose-500/15 text-rose-700 dark:text-rose-400">Overdue</span>';
+        if (c.calculatedStatus === 'partially_paid') return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-400">Partially Paid</span>';
         return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Unpaid</span>';
-      }
-
-      function getAllLenders() {
-        const set = new Set(DEFAULT_LENDERS);
-        plans.forEach(p => {
-          if (p.merchant) set.add(p.merchant);
-        });
-        return Array.from(set);
-      }
-
-      function showLenderSuggestions() {
-        const val = $('merchant').value.toLowerCase().trim();
-        const lenders = getAllLenders().filter(l => l.toLowerCase().includes(val));
-        const container = $('merchant-suggestions');
-
-        if (lenders.length === 0) {
-          container.classList.add('hidden');
-          return;
-        }
-
-        container.innerHTML = lenders.map(lender => `
-          <button type="button" class="w-full text-left px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-emerald-500/15 hover:text-emerald-600 dark:hover:text-emerald-400 transition flex items-center justify-between">
-            <span>${sanitize(lender)}</span>
-            <i data-lucide="corner-down-left" class="h-3 w-3 opacity-40"></i>
-          </button>
-        `).join('');
-
-        container.querySelectorAll('button').forEach((btn, idx) => {
-          btn.onclick = () => {
-            $('merchant').value = lenders[idx];
-            container.classList.add('hidden');
-          };
-        });
-
-        container.classList.remove('hidden');
-        lucide.createIcons();
       }
 
       function switchView(viewName) {
         currentView = viewName;
-
-        document.querySelectorAll('.app-view').forEach(v => {
-          v.classList.remove('active-view');
-        });
-        const targetViewEl = $(viewName + '-view');
-        if (targetViewEl) targetViewEl.classList.add('active-view');
+        document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active-view'));
+        const target = $(viewName + '-view');
+        if (target) target.classList.add('active-view');
 
         document.querySelectorAll('.nav-tab').forEach(tab => {
           tab.classList.toggle('active', tab.dataset.viewTarget === viewName);
         });
 
-        document.querySelectorAll('.desktop-nav-link').forEach(link => {
-          const isActive = link.dataset.viewTarget === viewName;
-          link.classList.toggle('text-emerald-600', isActive);
-          link.classList.toggle('dark:text-emerald-400', isActive);
-          link.classList.toggle('bg-emerald-500/10', isActive);
-          link.classList.toggle('text-slate-600', !isActive);
-          link.classList.toggle('dark:text-slate-400', !isActive);
-        });
-
-        const subtitles = {
-          home: 'Dashboard & Schedule',
-          plans: 'Installment Manager',
-          activity: 'Recent Payment History',
-          more: 'Settings & Storage'
-        };
-        $('header-subtitle').textContent = subtitles[viewName] || 'Overview';
-
-        if (viewName === 'home') {
-          renderDashboard();
-          renderCalendar();
-        }
+        if (viewName === 'home') { renderDashboard(); renderCalendar(); }
         if (viewName === 'plans') renderPlans();
         if (viewName === 'activity') renderActivity();
-
-        document.querySelector('.main-viewport').scrollTop = 0;
       }
 
       function renderDashboard() {
-        let totalPlans = plans.length;
-        let totalCommitment = 0;
-        let totalPaid = 0;
-        let totalRemaining = 0;
-        let expectedMonthly = 0;
-        let overdueCount = 0;
-
+        let totalCommitment = 0, totalPaid = 0, totalRemaining = 0, expectedMonthly = 0, overdueCount = 0;
         plans.forEach(p => {
           const c = calcPlan(p);
           totalCommitment += c.totalAmount;
           totalPaid += c.totalPaid;
           totalRemaining += c.remaining;
-          if (p.status === 'active' && c.remaining > 0) {
-            expectedMonthly += c.monthlyAmount;
-          }
-          if (c.isOverdue) {
-            overdueCount++;
-          }
+          if (p.status === 'active' && c.remaining > 0) expectedMonthly += c.monthlyAmount;
+          if (c.isOverdue) overdueCount++;
         });
-
-        const overallPercent = totalCommitment > 0 ? Math.min(100, Math.round((totalPaid / totalCommitment) * 100)) : 0;
 
         $('overall-remaining').textContent = money.format(totalRemaining);
         $('overall-total').textContent = money.format(totalCommitment);
-        $('overall-percent').textContent = overallPercent + '%';
-        $('overall-progress-bar').style.width = overallPercent + '%';
+        const percent = totalCommitment > 0 ? Math.min(100, Math.round((totalPaid / totalCommitment) * 100)) : 0;
+        $('overall-percent').textContent = percent + '%';
+        $('overall-progress-bar').style.width = percent + '%';
 
-        const hour = new Date().getHours();
-        let greeting = 'Good morning';
-        if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
-        if (hour >= 17) greeting = 'Good evening';
-        $('greeting-text').textContent = greeting;
-
-        const stats = [
-          ['Active Plans', totalPlans, 'wallet-cards', 'text-emerald-600 dark:text-emerald-400'],
-          ['Monthly Due', money.format(expectedMonthly), 'calendar-check', 'text-emerald-600 dark:text-emerald-400'],
-          ['Total Paid', money.format(totalPaid), 'check-circle-2', 'text-emerald-600 dark:text-emerald-400'],
-          ['Overdue Plans', overdueCount, 'alert-circle', overdueCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400']
-        ];
-
-        $('stat-grid').innerHTML = stats.map(s => `
-          <article class="glass-card rounded-2xl p-3.5 flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">${s[0]}</p>
-              <i data-lucide="${s[2]}" class="h-4 w-4 ${s[3]}"></i>
-            </div>
-            <p class="mt-2 text-base font-extrabold sm:text-lg ${s[0] === 'Overdue Plans' && s[1] > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'}">${s[1]}</p>
-          </article>
-        `).join('');
-
-        const activePlans = plans.filter(p => p.status === 'active' && calcPlan(p).remaining > 0);
-        const sortedByDue = [...activePlans].sort((a,b) => calcPlan(a).nextDueDate - calcPlan(b).nextDueDate);
-        const featured = sortedByDue[0] || plans[0];
-
-        if (featured) {
-          const c = calcPlan(featured);
-          $('featured-plan-name').textContent = featured.name;
-          $('featured-merchant').textContent = featured.merchant;
-          $('featured-detail').textContent = `${money.format(c.monthlyAmount)} / month · Due: ${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-          $('featured-progress').style.width = c.progressPercent + '%';
-          $('progress-count').textContent = `${c.paidInstallments} of ${c.tenure} installments paid`;
-          $('progress-percent').textContent = c.progressPercent + '%';
-          $('featured-status').innerHTML = getStatusBadge(featured);
-
-          $('featured-action-container').classList.remove('hidden');
-          $('featured-pay-btn').onclick = () => openPaymentModal(featured.id);
-        } else {
-          $('featured-plan-name').textContent = 'All Caught Up!';
-          $('featured-merchant').textContent = 'No outstanding installments.';
-          $('featured-detail').textContent = 'Create a plan to begin tracking your payoffs.';
-          $('featured-progress').style.width = '0%';
-          $('progress-count').textContent = '0 of 0 installments';
-          $('progress-percent').textContent = '100%';
-          $('featured-status').innerHTML = '';
-          $('featured-action-container').classList.add('hidden');
-        }
-
-        const upcoming = [...activePlans].sort((a,b) => calcPlan(a).nextDueDate - calcPlan(b).nextDueDate).slice(0, 4);
-        $('upcoming-list').innerHTML = upcoming.length
-          ? upcoming.map(p => {
-            const c = calcPlan(p);
-            return `
-              <div onclick="window.InstallTrackApp.openDetailModal('${p.id}')" class="flex items-center justify-between rounded-2xl p-2.5 bg-slate-200/50 dark:bg-slate-800/30 hover:bg-slate-200/80 dark:hover:bg-slate-800/60 transition cursor-pointer">
-                <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                  ${p.productImage ? `<img src="${p.productImage}" class="h-9 w-9 rounded-xl object-cover shrink-0" alt="product">` : ''}
-                  <div class="min-w-0">
-                    <p class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${sanitize(p.name)}</p>
-                    <p class="text-[10px] font-medium text-slate-500 dark:text-slate-400">${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} · ${money.format(c.monthlyAmount)}</p>
-                  </div>
-                </div>
-                ${getStatusBadge(p)}
-              </div>`;
-          }).join('')
-          : '<p class="text-xs font-medium py-4 text-center text-slate-500 dark:text-slate-400">No upcoming installment payments due.</p>';
-
-        lucide.createIcons();
-      }
-
-      function getFilteredPlans() {
-        const query = $('search-input').value.toLowerCase().trim();
-        const filter = $('filter-select').value;
-        const sort = $('sort-select').value;
-
-        return plans.filter(p => {
-          const c = calcPlan(p);
-
-          let matchesFilter = true;
-          if (filter === 'active') matchesFilter = p.status === 'active';
-          else if (filter === 'paused') matchesFilter = p.status === 'paused';
-          else if (filter === 'completed') matchesFilter = p.status === 'completed' || c.calculatedStatus === 'paid';
-          else if (filter === 'pending') matchesFilter = c.calculatedStatus === 'pending' && p.status !== 'paused';
-          else if (filter === 'partially_paid') matchesFilter = c.calculatedStatus === 'partially_paid' && p.status !== 'paused';
-          else if (filter === 'paid') matchesFilter = c.calculatedStatus === 'paid';
-          else if (filter === 'overdue') matchesFilter = c.isOverdue;
-
-          const notesText = p.payments.map(x => x.note || '').join(' ').toLowerCase();
-          const matchesQuery = (p.name + ' ' + p.merchant + ' ' + notesText).toLowerCase().includes(query);
-
-          return matchesFilter && matchesQuery;
-        }).sort((a,b) => {
-          const ca = calcPlan(a);
-          const cb = calcPlan(b);
-
-          if (sort === 'name_asc') return a.name.localeCompare(b.name);
-          if (sort === 'name_desc') return b.name.localeCompare(a.name);
-          if (sort === 'highest_total') return cb.totalAmount - ca.totalAmount;
-          if (sort === 'highest_remaining') return cb.remaining - ca.remaining;
-          if (sort === 'lowest_remaining') return ca.remaining - cb.remaining;
-          if (sort === 'newest') return (b.id || '').localeCompare(a.id || '');
-          if (sort === 'oldest') return (a.id || '').localeCompare(b.id || '');
-          return ca.nextDueDate - cb.nextDueDate;
-        });
-      }
-
-      function renderPlanCard(p) {
-        const c = calcPlan(p);
-        return `
-          <article class="plan-card glass-card rounded-3xl p-4 flex flex-col justify-between relative overflow-hidden">
-            <div>
-              ${p.productImage ? `
-                <div class="h-28 w-full -mt-4 -mx-4 mb-3 overflow-hidden relative border-b border-slate-200/60 dark:border-slate-800" style="width: calc(100% + 2rem);">
-                  <img src="${p.productImage}" class="h-full w-full object-cover" alt="${sanitize(p.name)}">
-                  <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
-                </div>
-              ` : ''}
-
-              <div class="flex justify-between items-start gap-2">
-                <div class="min-w-0 flex-1">
-                  <h3 class="truncate font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100" title="${sanitize(p.name)}">${sanitize(p.name)}</h3>
-                  <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">${sanitize(p.merchant)}</p>
-                </div>
-                <div class="shrink-0">${getStatusBadge(p)}</div>
-              </div>
-
-              <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Total Plan</p>
-                  <p class="font-black text-sm text-slate-800 dark:text-slate-200">${money.format(c.totalAmount)}</p>
-                </div>
-                <div>
-                  <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Remaining</p>
-                  <p class="font-black text-sm text-emerald-600 dark:text-emerald-400">${money.format(c.remaining)}</p>
-                </div>
-              </div>
-
-              <div class="mt-3 text-xs">
-                <div class="flex justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                  <span>Next Due: <b class="text-slate-800 dark:text-slate-200">${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</b></span>
-                  <span><b class="text-slate-800 dark:text-slate-200">${money.format(c.monthlyAmount)}</b> / mo</span>
-                </div>
-              </div>
-
-              <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                <div class="h-full rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-500" style="width:${c.progressPercent}%"></div>
-              </div>
-              <p class="mt-1 text-right text-[10px] font-bold text-slate-500 dark:text-slate-400">${c.progressPercent}% Paid (${c.paidInstallments}/${c.tenure})</p>
-            </div>
-
-            <div class="mt-4 flex items-center gap-1.5 pt-3 border-t border-slate-200/60 dark:border-slate-800">
-              <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}')" type="button" class="flex-1 rounded-2xl py-2 px-2 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-sm transition ${c.remaining <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${c.remaining <= 0 ? 'disabled' : ''}>+ Pay</button>
-              <button onclick="window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="rounded-2xl bg-slate-200/80 dark:bg-slate-800/80 px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 transition">View</button>
-              <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="rounded-2xl bg-slate-200/80 dark:bg-slate-800/80 px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 transition" aria-label="Edit plan"><i data-lucide="edit-3" class="h-3.5 w-3.5"></i></button>
-              <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 px-2.5 py-2 text-xs font-bold transition" aria-label="Delete plan"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button>
-            </div>
-          </article>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
 
       function renderPlans() {
-        const list = getFilteredPlans();
+        const list = plans;
         $('plans-count').textContent = `Showing ${list.length} of ${plans.length} total plans`;
         $('empty-plans').classList.toggle('hidden', list.length > 0);
 
         if (layoutMode === 'grid') {
-          $('plan-list').innerHTML = '<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' + list.map(renderPlanCard).join('') + '</div>';
+          $('plan-list').innerHTML = '<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' + list.map(p => {
+            const c = calcPlan(p);
+            return `
+              <article class="plan-card glass-card rounded-3xl p-4 flex flex-col justify-between relative overflow-hidden">
+                <div>
+                  <div class="flex justify-between items-start gap-2">
+                    <div class="min-w-0 flex-1">
+                      <h3 class="truncate font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">${sanitize(p.name)}</h3>
+                      <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">${sanitize(p.merchant)}</p>
+                    </div>
+                    <div class="shrink-0">${getStatusBadge(p)}</div>
+                  </div>
+                  <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Total Plan</p>
+                      <p class="font-black text-sm text-slate-800 dark:text-slate-200">${money.format(c.totalAmount)}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Remaining</p>
+                      <p class="font-black text-sm text-emerald-600 dark:text-emerald-400">${money.format(c.remaining)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-4 flex items-center gap-1.5 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                  <button onclick="window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="flex-1 rounded-2xl bg-slate-200/80 dark:bg-slate-800/80 px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200">View</button>
+                  <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="rounded-2xl bg-slate-200/80 dark:bg-slate-800/80 px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200">Edit</button>
+                  <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2.5 py-2 text-xs font-bold">Del</button>
+                </div>
+              </article>`;
+          }).join('') + '</div>';
         } else if (layoutMode === 'table') {
-          // MIN WIDTH CONTAINER ADDED TO FORCE HORIZONTAL SCROLL ON MOBILE SCREENS
           $('plan-list').innerHTML = `
             <div class="overflow-x-auto rounded-3xl glass-card w-full">
               <table class="w-full text-left text-xs min-w-[650px]">
@@ -1267,9 +1021,8 @@
                     return `
                       <tr class="hover:bg-slate-200/40 dark:hover:bg-slate-800/30 transition">
                         <td class="p-3.5 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                          ${p.productImage ? `<img src="${p.productImage}" class="h-7 w-7 rounded-lg object-cover shrink-0" alt="product">` : ''}
                           <div class="min-w-0">
-                            <span class="truncate block font-bold" title="${sanitize(p.name)}">${sanitize(p.name)}</span>
+                            <span class="truncate block font-bold">${sanitize(p.name)}</span>
                             <span class="font-normal text-[11px] text-slate-500 dark:text-slate-400 truncate block">${sanitize(p.merchant)}</span>
                           </div>
                         </td>
@@ -1279,7 +1032,6 @@
                         <td class="p-3.5 font-semibold text-slate-700 dark:text-slate-300">${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</td>
                         <td class="p-3.5">${getStatusBadge(p)}</td>
                         <td class="p-3.5 text-right space-x-1">
-                          <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-emerald-600 text-white dark:bg-emerald-400 dark:text-slate-950 text-[11px] ${c.remaining <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${c.remaining <= 0 ? 'disabled' : ''}>Pay</button>
                           <button onclick="window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[11px]">View</button>
                           <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[11px]">Edit</button>
                           <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[11px]">Del</button>
@@ -1289,144 +1041,26 @@
                 </tbody>
               </table>
             </div>`;
-        } else {
-          $('plan-list').innerHTML = '<div class="space-y-2.5">' + list.map(p => {
-            const c = calcPlan(p);
-            return `
-              <div class="flex items-center justify-between gap-2 rounded-2xl p-3.5 glass-card hover:bg-slate-200/50 dark:hover:bg-slate-800/40 transition">
-                <div class="flex items-center gap-3 min-w-0 pr-2">
-                  ${p.productImage ? `<img src="${p.productImage}" class="h-8 w-8 rounded-xl object-cover shrink-0" alt="product">` : ''}
-                  <div class="min-w-0">
-                    <p class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${sanitize(p.name)} <span class="font-normal text-slate-500 dark:text-slate-400">(${sanitize(p.merchant)})</span></p>
-                    <p class="text-[10px] text-slate-500 dark:text-slate-400">Due day ${p.dueDay} · Remaining: ${money.format(c.remaining)}</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                  <span class="font-black text-xs text-emerald-600 dark:text-emerald-400">${money.format(c.monthlyAmount)}/mo</span>
-                  <button onclick="window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="rounded-xl px-2.5 py-1.5 text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">View</button>
-                  <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="rounded-xl px-2.5 py-1.5 text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Edit</button>
-                  <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="rounded-xl px-2 py-1.5 text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button>
-                </div>
-              </div>`;
-          }).join('') + '</div>';
         }
-
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
 
-      function renderCalendar() {
-        const year = calendarDate.getFullYear();
-        const month = calendarDate.getMonth();
-        const firstDayIdx = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+      function renderCalendar() {}
+      function renderActivity() {}
 
-        $('calendar-month-title').textContent = new Date(year, month).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
-
-        let html = Array(firstDayIdx).fill('<div class="calendar-cell opacity-20 bg-slate-200/40 dark:bg-slate-900/30 rounded-2xl"></div>').join('');
-
-        for (let day = 1; day <= daysInMonth; day++) {
-          const currentDate = new Date(year, month, day);
-          const isToday = currentDate.toDateString() === today.toDateString();
-
-          const dayPlans = plans.filter(p => {
-            if (p.status === 'paused') return false;
-            const c = calcPlan(p);
-            if (c.remaining <= 0) return false;
-            return Math.min(p.dueDay, 28) === day;
-          });
-
-          html += `
-            <div onclick="window.InstallTrackApp.openCalendarDayModal(${year}, ${month}, ${day})" class="calendar-cell p-1.5 flex flex-col justify-between cursor-pointer rounded-2xl bg-slate-200/60 dark:bg-slate-900/40 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition ${isToday ? 'bg-emerald-500/20 dark:bg-emerald-500/25 ring-2 ring-emerald-500' : ''}">
-              <span class="text-[10px] font-extrabold ${isToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}">${day}</span>
-              <div class="space-y-1 mt-1">
-                ${dayPlans.map(p => {
-                  const c = calcPlan(p);
-                  const isOver = c.nextDueDate < today;
-                  return `
-                    <div class="rounded-xl px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black truncate shadow-xs ${isOver ? 'bg-rose-500 text-white' : 'bg-emerald-600 text-white dark:bg-emerald-400 dark:text-slate-950'}" title="${sanitize(p.name)} - ${money.format(c.monthlyAmount)}">
-                      ${sanitize(p.name)}
-                    </div>`;
-                }).join('')}
-              </div>
-            </div>`;
-        }
-        $('calendar-grid').innerHTML = html;
-      }
-
-      function renderActivity() {
-        const allPayments = [];
-        plans.forEach(p => {
-          p.payments.forEach(pm => {
-            allPayments.push({
-              ...pm,
-              planName: p.name,
-              merchant: p.merchant,
-              planId: p.id
-            });
-          });
-        });
-
-        $('empty-activity').classList.toggle('hidden', allPayments.length > 0);
-
-        if (allPayments.length === 0) {
-          $('activity-timeline').innerHTML = '';
-          return;
-        }
-
-        allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        const groups = {};
-        allPayments.forEach(pm => {
-          const d = new Date(pm.date);
-          const key = d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(pm);
-        });
-
-        let html = '';
-        for (const [dateStr, items] of Object.entries(groups)) {
-          html += `
-            <div class="space-y-2">
-              <h3 class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 pl-1">${dateStr}</h3>
-              <div class="space-y-2">
-                ${items.map(item => `
-                  <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                      <div class="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                        <i data-lucide="check-circle" class="h-4 w-4"></i>
-                      </div>
-                      <div>
-                        <h4 class="text-xs font-bold text-slate-900 dark:text-slate-100">${sanitize(item.planName)}</h4>
-                        <p class="text-[10px] text-slate-500 dark:text-slate-400">${sanitize(item.merchant)} ${item.note ? '· ' + sanitize(item.note) : ''}</p>
-                      </div>
-                    </div>
-                    <div class="text-right">
-                      <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">+ ${money.format(item.amount)}</span>
-                      <div class="flex justify-end gap-2 mt-1">
-                        <button onclick="window.InstallTrackApp.openPaymentModal('${item.planId}', '${item.id}')" type="button" class="text-[10px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Edit</button>
-                        <button onclick="window.InstallTrackApp.confirmDeletePayment('${item.planId}', '${item.id}')" type="button" class="text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:underline">Delete</button>
-                      </div>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>`;
-        }
-
-        $('activity-timeline').innerHTML = html;
-        lucide.createIcons();
-      }
-
+      // MODAL CONTROLLERS
       function openModal(planId = null) {
-        const p = plans.find(x => x.id === planId);
-        
+        const modal = $('modal');
+        if (!modal) return;
+
         closeDetailModal();
 
-        $('modal').classList.remove('hidden');
-        $('modal').classList.add('flex');
-        $('plan-form').reset();
-        receiptData = '';
-        productData = '';
+        const p = plans.find(x => x.id === planId);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        const form = $('plan-form');
+        if (form) form.reset();
 
         $('modal-title').textContent = p ? 'Edit Installment Plan' : 'New Installment Plan';
         $('plan-id').value = p?.id || '';
@@ -1437,56 +1071,25 @@
         $('start-date').value = p?.startDate || new Date().toISOString().slice(0, 10);
         $('due-day').value = p?.dueDay || 15;
         $('status').value = p?.status || 'active';
-        receiptData = p?.receipt || '';
-        productData = p?.productImage || '';
 
-        if (receiptData) {
-          $('receipt-preview').src = receiptData;
-          $('receipt-container').classList.remove('hidden');
-        } else {
-          $('receipt-container').classList.add('hidden');
-        }
-
-        if (productData) {
-          $('product-preview').src = productData;
-          $('product-container').classList.remove('hidden');
-        } else {
-          $('product-container').classList.add('hidden');
-        }
-
-        calcFormEstimates();
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
 
       function closeModal() {
-        $('modal').classList.add('hidden');
-        $('modal').classList.remove('flex');
-        $('merchant-suggestions').classList.add('hidden');
+        const modal = $('modal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
       }
 
-      function calcFormEstimates() {
-        const amount = Number($('amount').value) || 0;
-        const tenure = Math.max(1, Number($('tenure').value) || 1);
-        const planId = $('plan-id').value;
-
-        const existingPlan = plans.find(p => p.id === planId);
-        const totalPaid = existingPlan ? existingPlan.payments.reduce((sum, item) => sum + Number(item.amount), 0) : 0;
-
-        const monthlyVal = amount / tenure;
-        const remainingVal = Math.max(0, amount - totalPaid);
-
-        $('monthly-result').textContent = money.format(monthlyVal);
-        $('remaining-result').textContent = money.format(remainingVal);
-      }
-
-      function openDetailModal(planId) {
-        activeDetailPlanId = planId;
+      function openDetailModal(planId) { 
+        activeDetailPlanId = planId; 
         const p = plans.find(x => x.id === planId);
         if (!p) return;
-
         const c = calcPlan(p);
-        $('detail-plan-name').textContent = p.name;
 
+        $('detail-plan-name').textContent = p.name;
         $('detail-content').innerHTML = `
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-2xl p-4 bg-slate-200/60 dark:bg-slate-800/40">
             <div>
@@ -1506,486 +1109,99 @@
               <p class="text-xs font-extrabold text-slate-900 dark:text-slate-100">${money.format(c.remaining)}</p>
             </div>
           </div>
-
-          <div class="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
-            <span>Payment Progress (${c.progressPercent}%)</span>
-            <span>Next due: ${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-          </div>
-
-          <div class="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-            <div class="h-full rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-500" style="width:${c.progressPercent}%"></div>
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-extrabold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Ledger (${p.payments.length})</h4>
-              <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}')" type="button" class="rounded-2xl px-3 py-1.5 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-sm transition ${c.remaining <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${c.remaining <= 0 ? 'disabled' : ''}>+ Add Payment</button>
-            </div>
-
-            <div class="space-y-2 max-h-48 overflow-y-auto pr-1 no-scrollbar">
-              ${p.payments.length ? p.payments.sort((a,b) => new Date(b.date) - new Date(a.date)).map(pm => `
-                <div class="flex items-center justify-between rounded-2xl p-3 text-xs bg-slate-200/50 dark:bg-slate-800/30">
-                  <div>
-                    <span class="font-bold text-slate-900 dark:text-slate-100">${money.format(pm.amount)}</span>
-                    <span class="ml-2 text-[10px] text-slate-500 dark:text-slate-400">${new Date(pm.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    ${pm.note ? `<p class="text-[10px] text-slate-500 dark:text-slate-400 italic">${sanitize(pm.note)}</p>` : ''}
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}', '${pm.id}')" type="button" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Edit</button>
-                    <button onclick="window.InstallTrackApp.confirmDeletePayment('${p.id}', '${pm.id}')" type="button" class="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline">Delete</button>
-                  </div>
-                </div>
-              `).join('') : '<p class="text-xs font-medium py-4 text-center text-slate-500 dark:text-slate-400">No payment records logged yet.</p>'}
-            </div>
-          </div>
-
-          <div class="grid gap-3 sm:grid-cols-2">
-            ${p.productImage ? `
-              <div>
-                <h4 class="font-extrabold text-xs uppercase tracking-wider mb-2 text-slate-500 dark:text-slate-400">Product Photo</h4>
-                <img src="${p.productImage}" alt="Product image" class="max-h-40 w-full rounded-2xl object-cover">
-              </div>
-            ` : ''}
-
-            ${p.receipt ? `
-              <div>
-                <h4 class="font-extrabold text-xs uppercase tracking-wider mb-2 text-slate-500 dark:text-slate-400">Attached Receipt</h4>
-                <img src="${p.receipt}" alt="Receipt image" class="max-h-40 w-full rounded-2xl object-cover">
-              </div>
-            ` : ''}
-          </div>
-
-          <div class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-200/60 dark:border-slate-800">
-            <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition">
-              <i data-lucide="trash-2" class="h-4 w-4"></i> Delete Plan
-            </button>
+          <div class="flex items-center justify-between gap-2 pt-4 border-t border-slate-200/60 dark:border-slate-800">
+            <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition">Delete Plan</button>
             <div class="flex items-center gap-2">
-              <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="inline-flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 transition">
-                <i data-lucide="edit-3" class="h-4 w-4"></i> Edit Plan
-              </button>
-              <button onclick="window.InstallTrackApp.closeDetailModal()" type="button" class="rounded-2xl px-4 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Close</button>
+              <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="rounded-2xl px-3.5 py-2 text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Edit</button>
+              <button onclick="window.InstallTrackApp.closeDetailModal()" type="button" class="rounded-2xl px-4 py-2 text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Close</button>
             </div>
           </div>
         `;
-
         $('detail-modal').classList.remove('hidden');
         $('detail-modal').classList.add('flex');
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
 
       function closeDetailModal() {
-        $('detail-modal').classList.add('hidden');
-        $('detail-modal').classList.remove('flex');
+        const detailModal = $('detail-modal');
+        if (detailModal) {
+          detailModal.classList.add('hidden');
+          detailModal.classList.remove('flex');
+        }
         activeDetailPlanId = null;
       }
 
-      function openPaymentModal(planId, paymentId = null) {
-        const p = plans.find(x => x.id === planId);
-        if (!p) return;
-
-        const c = calcPlan(p);
-        const existingPayment = paymentId ? p.payments.find(x => x.id === paymentId) : null;
-
-        $('payment-plan-id').value = planId;
-        $('payment-entry-id').value = paymentId || '';
-        $('payment-modal-title').textContent = paymentId ? 'Edit Payment Entry' : 'Record Payment';
-
-        $('payment-amount').value = existingPayment ? existingPayment.amount : Math.min(c.remaining, Math.round(c.monthlyAmount * 100) / 100);
-        $('payment-date').value = existingPayment ? existingPayment.date : new Date().toISOString().slice(0, 10);
-        $('payment-note').value = existingPayment ? (existingPayment.note || '') : '';
-
-        $('payment-current-remaining').textContent = money.format(c.remaining + (existingPayment ? existingPayment.amount : 0));
-        updatePaymentAfterCalculation();
-
-        $('payment-modal').classList.remove('hidden');
-        $('payment-modal').classList.add('flex');
-      }
-
-      function closePaymentModal() {
-        $('payment-modal').classList.add('hidden');
-        $('payment-modal').classList.remove('flex');
-      }
-
-      function updatePaymentAfterCalculation() {
-        const planId = $('payment-plan-id').value;
-        const paymentId = $('payment-entry-id').value;
-        const p = plans.find(x => x.id === planId);
-        if (!p) return;
-
-        const c = calcPlan(p);
-        const existingPayment = paymentId ? p.payments.find(x => x.id === paymentId) : null;
-        const effectiveRemaining = c.remaining + (existingPayment ? existingPayment.amount : 0);
-
-        const inputAmt = Number($('payment-amount').value) || 0;
-        const afterRemaining = Math.max(0, effectiveRemaining - inputAmt);
-
-        $('payment-after-remaining').textContent = money.format(afterRemaining);
-      }
-
-      function openCalendarDayModal(year, month, day) {
-        const targetDate = new Date(year, month, day);
-        const dayPlans = plans.filter(p => p.status !== 'paused' && Math.min(p.dueDay, 28) === day);
-
-        $('calendar-day-title').textContent = targetDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-
-        $('calendar-day-list').innerHTML = dayPlans.length ? dayPlans.map(p => {
-          const c = calcPlan(p);
-          return `
-            <div class="flex items-center justify-between rounded-2xl p-3 bg-slate-200/50 dark:bg-slate-900/40">
-              <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                ${p.productImage ? `<img src="${p.productImage}" class="h-8 w-8 rounded-xl object-cover shrink-0" alt="product">` : ''}
-                <div class="min-w-0">
-                  <b class="text-xs font-bold text-slate-900 dark:text-slate-100 block truncate">${sanitize(p.name)}</b>
-                  <p class="text-[10px] text-slate-500 dark:text-slate-400">Monthly: ${money.format(c.monthlyAmount)}</p>
-                </div>
-              </div>
-              <button onclick="window.InstallTrackApp.closeCalendarDayModal(); window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="shrink-0 rounded-xl px-3 py-1.5 text-xs font-extrabold text-white bg-emerald-600 dark:bg-emerald-400 dark:text-slate-950">View Plan</button>
-            </div>
-          `;
-        }).join('') : '<p class="text-xs font-medium py-4 text-center text-slate-500 dark:text-slate-400">No installments due on this date.</p>';
-
-        $('calendar-day-modal').classList.remove('hidden');
-        $('calendar-day-modal').classList.add('flex');
-      }
-
-      function closeCalendarDayModal() {
-        $('calendar-day-modal').classList.add('hidden');
-        $('calendar-day-modal').classList.remove('flex');
+      function confirmDeletePlan(planId) {
+        plans = plans.filter(p => p.id !== planId);
+        saveData();
+        closeDetailModal();
+        renderDashboard();
+        renderPlans();
+        toast('Plan deleted successfully.');
       }
 
       function toast(msg) {
-        $('toast').textContent = msg;
-        $('toast').classList.add('show');
-        setTimeout(() => $('toast').classList.remove('show'), 2800);
+        const t = $('toast');
+        if (t) {
+          t.textContent = msg;
+          t.classList.add('show');
+          setTimeout(() => t.classList.remove('show'), 2800);
+        }
       }
 
-      function showConfirm(title, msg, onConfirm) {
-        $('confirm-modal-title').textContent = title;
-        $('confirm-modal-msg').textContent = msg;
-        $('confirm-modal').classList.remove('hidden');
-        $('confirm-modal').classList.add('flex');
-
-        const handleAction = () => {
-          onConfirm();
-          closeConfirm();
-        };
-
-        const closeConfirm = () => {
-          $('confirm-modal').classList.add('hidden');
-          $('confirm-modal').classList.remove('flex');
-          $('confirm-modal-action').removeEventListener('click', handleAction);
-        };
-
-        $('confirm-modal-action').onclick = handleAction;
-        $('confirm-modal-cancel').onclick = closeConfirm;
-      }
-
-      function confirmDeletePlan(planId) {
-        showConfirm('Delete Installment Plan?', 'This plan and all associated payment entries will be erased.', () => {
-          plans = plans.filter(p => p.id !== planId);
-          saveData();
-          closeDetailModal();
-          switchView(currentView);
-          toast('Plan successfully deleted.');
-        });
-      }
-
-      function confirmDeletePayment(planId, paymentId) {
-        showConfirm('Delete Payment Entry?', 'This payment entry will be removed and balances recalculated.', () => {
-          const p = plans.find(x => x.id === planId);
-          if (p) {
-            p.payments = p.payments.filter(x => x.id !== paymentId);
-            saveData();
-            switchView(currentView);
-            if (activeDetailPlanId === planId) openDetailModal(planId);
-            toast('Payment entry erased.');
-          }
-        });
-      }
-
-      function setupEventListeners() {
-        ['modal', 'detail-modal', 'payment-modal', 'calendar-day-modal', 'confirm-modal'].forEach(id => {
-          const backdrop = $(id);
-          if (backdrop) {
-            backdrop.addEventListener('click', e => {
-              if (e.target === backdrop) {
-                if (id === 'modal') closeModal();
-                else if (id === 'detail-modal') closeDetailModal();
-                else if (id === 'payment-modal') closePaymentModal();
-                else if (id === 'calendar-day-modal') closeCalendarDayModal();
-                else if (id === 'confirm-modal') {
-                  backdrop.classList.add('hidden');
-                  backdrop.classList.remove('flex');
-                }
-              }
-            });
-          }
-        });
-
-        document.addEventListener('click', e => {
-          const merchantInput = $('merchant');
-          const suggestionsBox = $('merchant-suggestions');
-          if (merchantInput && suggestionsBox && !merchantInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
-            suggestionsBox.classList.add('hidden');
-          }
-        });
-
-        $('merchant').addEventListener('focus', showLenderSuggestions);
-        $('merchant').addEventListener('input', showLenderSuggestions);
-
-        $('plan-form').addEventListener('submit', e => {
-          e.preventDefault();
-          const id = $('plan-id').value;
-          const existing = plans.find(p => p.id === id);
-
-          const newObj = {
-            id: id || 'plan_' + Date.now(),
-            name: $('plan-name').value.trim(),
-            merchant: $('merchant').value.trim(),
-            amount: Number($('amount').value),
-            tenure: Number($('tenure').value),
-            startDate: $('start-date').value,
-            dueDay: Number($('due-day').value),
-            status: $('status').value,
-            receipt: receiptData,
-            productImage: productData,
-            payments: existing ? existing.payments : []
-          };
-
-          if (id) {
-            plans = plans.map(p => p.id === id ? newObj : p);
-          } else {
-            plans.push(newObj);
-          }
-
-          saveData();
-          closeModal();
-          switchView(currentView);
-          toast(id ? 'Plan updated successfully.' : 'New plan created.');
-        });
-
-        $('payment-form').addEventListener('submit', e => {
-          e.preventDefault();
-          const planId = $('payment-plan-id').value;
-          const entryId = $('payment-entry-id').value;
-          const amt = Number($('payment-amount').value);
-          const dateVal = $('payment-date').value;
-          const noteVal = $('payment-note').value.trim();
-
-          const p = plans.find(x => x.id === planId);
-          if (!p) return;
-
-          if (entryId) {
-            p.payments = p.payments.map(x => x.id === entryId ? { id: entryId, amount: amt, date: dateVal, note: noteVal } : x);
-          } else {
-            p.payments.push({
-              id: 'pm_' + Date.now(),
-              amount: amt,
-              date: dateVal,
-              note: noteVal
-            });
-          }
-
-          saveData();
-          closePaymentModal();
-          switchView(currentView);
-          if (activeDetailPlanId === planId) openDetailModal(planId);
-          toast('Payment recorded.');
-        });
-
-        ['amount', 'tenure'].forEach(id => $(id).addEventListener('input', calcFormEstimates));
-        $('payment-amount').addEventListener('input', updatePaymentAfterCalculation);
-
-        $('product-upload').addEventListener('change', e => {
-          const file = e.target.files[0];
-          if (!file) return;
-
-          const reader = new FileReader();
-          reader.onload = ev => {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const scale = Math.min(1, 800 / img.width);
-              canvas.width = img.width * scale;
-              canvas.height = img.height * scale;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              productData = canvas.toDataURL('image/jpeg', 0.75);
-              $('product-preview').src = productData;
-              $('product-container').classList.remove('hidden');
-            };
-            img.src = ev.target.result;
-          };
-          reader.readAsDataURL(file);
-        });
-
-        $('remove-product').onclick = () => {
-          productData = '';
-          $('product-preview').src = '';
-          $('product-container').classList.add('hidden');
-          $('product-upload').value = '';
-        };
-
-        $('receipt-upload').addEventListener('change', e => {
-          const file = e.target.files[0];
-          if (!file) return;
-
-          const reader = new FileReader();
-          reader.onload = ev => {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const scale = Math.min(1, 800 / img.width);
-              canvas.width = img.width * scale;
-              canvas.height = img.height * scale;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              receiptData = canvas.toDataURL('image/jpeg', 0.75);
-              $('receipt-preview').src = receiptData;
-              $('receipt-container').classList.remove('hidden');
-            };
-            img.src = ev.target.result;
-          };
-          reader.readAsDataURL(file);
-        });
-
-        $('remove-receipt').onclick = () => {
-          receiptData = '';
-          $('receipt-preview').src = '';
-          $('receipt-container').classList.add('hidden');
-          $('receipt-upload').value = '';
-        };
-
-        $('close-modal').onclick = closeModal;
-        $('close-detail-modal').onclick = closeDetailModal;
-        $('close-payment-modal').onclick = closePaymentModal;
-        $('close-calendar-day-modal').onclick = closeCalendarDayModal;
-
-        window.addEventListener('keydown', e => {
-          if (e.key === 'Escape') {
-            closeModal();
-            closeDetailModal();
-            closePaymentModal();
-            closeCalendarDayModal();
-          }
-        });
-
-        ['search-input', 'filter-select', 'sort-select'].forEach(id => $(id).addEventListener('input', renderPlans));
-
-        document.querySelectorAll('.layout-btn').forEach(btn => {
-          btn.onclick = () => {
-            layoutMode = btn.dataset.layout;
-            document.querySelectorAll('.layout-btn').forEach(x => {
-              const isActive = x === btn;
-              x.classList.toggle('text-emerald-600', isActive);
-              x.classList.toggle('dark:text-emerald-400', isActive);
-              x.classList.toggle('bg-emerald-500/15', isActive);
-              x.classList.toggle('text-slate-500', !isActive);
-              x.classList.toggle('dark:text-slate-400', !isActive);
-            });
-            renderPlans();
-          };
-        });
-
-        $('prev-month').onclick = () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); };
-        $('next-month').onclick = () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); };
-        $('today-month').onclick = () => { calendarDate = new Date(); renderCalendar(); };
-
-        const toggleTheme = () => {
-          const isDark = document.body.classList.toggle('dark');
-          localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
-
-          const thumb = $('theme-switch-thumb');
-          if (thumb) {
-            thumb.classList.toggle('translate-x-5', isDark);
-            thumb.classList.toggle('translate-x-0', !isDark);
-          }
-        };
-
-        $('theme-toggle').onclick = toggleTheme;
-        $('theme-switch-btn').onclick = toggleTheme;
-
-        $('export-btn').onclick = () => {
-          const blob = new Blob([JSON.stringify(plans, null, 2)], { type: 'application/json' });
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = `installtrack-export-${new Date().toISOString().slice(0, 10)}.json`;
-          a.click();
-          URL.revokeObjectURL(a.href);
-          toast('Data successfully exported.');
-        };
-
-        $('import-file').addEventListener('change', e => {
-          const file = e.target.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            try {
-              const data = JSON.parse(reader.result);
-              if (!Array.isArray(data)) throw new Error('Invalid schema');
-
-              showConfirm('Import & Overwrite Data?', 'Importing will replace your existing local installment records.', () => {
-                plans = migrateData(data);
-                saveData();
-                switchView(currentView);
-                toast('Data successfully imported.');
-              });
-            } catch (err) {
-              toast('Invalid JSON file format.');
-            }
-          };
-          reader.readAsText(file);
-          e.target.value = '';
-        });
-
-        $('clear-btn').onclick = () => {
-          showConfirm('Clear All Storage Data?', 'All installment records and payment histories will be permanently wiped.', () => {
-            plans = [];
-            saveData();
-            switchView(currentView);
-            toast('All local data cleared.');
-          });
-        };
-      }
+      // EXPOSE GLOBAL API IMMEDIATELY
+      window.InstallTrackApp = {
+        switchView,
+        openModal,
+        closeModal,
+        openDetailModal,
+        closeDetailModal,
+        confirmDeletePlan
+      };
 
       function init() {
-        if (localStorage.getItem(THEME_KEY) === 'light') {
-          document.body.classList.remove('dark');
-          const thumb = $('theme-switch-thumb');
-          if (thumb) {
-            thumb.classList.remove('translate-x-5');
-            thumb.classList.add('translate-x-0');
-          }
-        }
         loadData();
-        setupEventListeners();
-        switchView('home');
-        lucide.createIcons();
 
-        window.InstallTrackApp = {
-          switchView,
-          openModal,
-          closeModal,
-          openDetailModal,
-          closeDetailModal,
-          openPaymentModal,
-          confirmDeletePlan,
-          confirmDeletePayment,
-          openCalendarDayModal,
-          closeCalendarDayModal
-        };
+        const closeBtn = $('close-modal');
+        if (closeBtn) closeBtn.onclick = closeModal;
+
+        const closeDetailBtn = $('close-detail-modal');
+        if (closeDetailBtn) closeDetailBtn.onclick = closeDetailModal;
+
+        const planForm = $('plan-form');
+        if (planForm) {
+          planForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const id = $('plan-id').value;
+            const newObj = {
+              id: id || 'plan_' + Date.now(),
+              name: $('plan-name').value.trim(),
+              merchant: $('merchant').value.trim(),
+              amount: Number($('amount').value),
+              tenure: Number($('tenure').value),
+              startDate: $('start-date').value,
+              dueDay: Number($('due-day').value),
+              status: $('status').value,
+              payments: []
+            };
+
+            if (id) plans = plans.map(p => p.id === id ? newObj : p);
+            else plans.push(newObj);
+
+            saveData();
+            closeModal();
+            renderDashboard();
+            renderPlans();
+            toast('Plan saved successfully!');
+          });
+        }
+
+        switchView('home');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
 
       init();
     })();
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then((reg) => console.log('Service Worker Registered:', reg.scope))
-          .catch((err) => console.error('Service Worker Registration Failed:', err));
-      });
-    }
   </script>
 </body>
 </html>
