@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <title>InstallTrack — Personal Installment Tracker</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..900;1,9..40,300..900&family=Fraunces:opsz,wght@9..144,600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- PWA Manifest Link -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Mobile App Capability Tags -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="InstallTrack">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            heading: ['Fraunces', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg-app: #f1f5f9;
+      --accent: #059669;
+      --accent-hover: #047857;
+      --accent-soft: rgba(5, 150, 105, 0.12);
+      --accent-glow: rgba(16, 185, 129, 0.18);
+      --surface: rgba(255, 255, 255, 0.65);
+      --surface-elevated: rgba(255, 255, 255, 0.72);
+      --surface-glass: rgba(255, 255, 255, 0.75);
+      --border: rgba(15, 23, 42, 0.08);
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --shadow-sm: 0 4px 20px 0 rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 12px 32px -4px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 24px 48px -12px rgba(15, 23, 42, 0.16);
+    }
+
+    body.dark {
+      --bg-app: #070a11;
+      --accent: #34d399;
+      --accent-hover: #10b981;
+      --accent-soft: rgba(52, 211, 153, 0.14);
+      --accent-glow: rgba(52, 211, 153, 0.22);
+      --surface: rgba(15, 23, 42, 0.55);
+      --surface-elevated: rgba(23, 32, 51, 0.65);
+      --surface-glass: rgba(15, 23, 42, 0.60);
+      --border: rgba(255, 255, 255, 0.09);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --shadow-sm: 0 4px 20px 0 rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 12px 32px -8px rgba(0, 0, 0, 0.50);
+      --shadow-lg: 0 24px 48px -12px rgba(0, 0, 0, 0.70);
+    }
+
+    /* HARD OVERRIDE TO PREVENT TEXT WRAPPING IN TABLE HEADERS & CELLS */
+    th, td {
+      white-space: nowrap !important;
+      word-break: normal !important;
+      overflow-wrap: normal !important;
+    }
+
+    * {
+      box-sizing: border-box;
+      min-width: 0;
+    }
+
+    html, body {
+      height: 100dvh;
+      height: 100vh;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      font-family: 'DM Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .app-shell {
+      height: 100dvh;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      background:
+        radial-gradient(circle at 10% 5%, var(--accent-glow), transparent 40%),
+        radial-gradient(circle at 90% 85%, rgba(37, 99, 235, 0.08), transparent 40%),
+        var(--bg-app);
+    }
+
+    .main-viewport {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+
+    .glass-header {
+      background: var(--surface);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .glass-card {
+      background: var(--surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-card-elevated {
+      background: var(--surface-elevated);
+      backdrop-filter: blur(28px) saturate(200%);
+      -webkit-backdrop-filter: blur(28px) saturate(200%);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+    }
+
+    .glass-bottom-nav {
+      background: var(--surface);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .glass-modal {
+      background: var(--surface-elevated);
+      backdrop-filter: blur(32px) saturate(210%);
+      -webkit-backdrop-filter: blur(32px) saturate(210%);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .nav-tab {
+      color: var(--text-muted);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .nav-tab.active {
+      color: var(--accent);
+    }
+    .nav-tab.active .nav-icon-wrapper {
+      background: var(--accent-soft);
+      transform: translateY(-2px);
+    }
+
+    .app-view {
+      display: none;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .app-view.active-view {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .plan-card {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+    }
+    .plan-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .calendar-cell {
+      min-height: 64px;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+    .calendar-cell:hover {
+      background: var(--accent-soft);
+    }
+
+    input, select, textarea {
+      background: var(--surface-glass);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .toast-banner {
+      transform: translateY(120%);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+    }
+    .toast-banner.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)); }
+    .safe-top { padding-top: max(0.5rem, env(safe-area-inset-top, 0px)); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body class="dark">
+
+  <div class="app-shell">
+    <div class="flex h-full w-full overflow-hidden">
+
+      <!-- DESKTOP SIDEBAR -->
+      <aside class="hidden lg:flex lg:w-64 lg:flex-col shrink-0 glass-header z-30 border-r border-slate-200/50 dark:border-slate-800/60 px-5 py-6">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+            <svg class="h-6 w-6" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="26" height="20" rx="6" stroke="currentColor" stroke-width="2.2" class="opacity-90"/>
+              <path d="M3 13H29" stroke="currentColor" stroke-width="2" class="opacity-40"/>
+              <circle cx="21" cy="20" r="3.5" fill="currentColor" class="opacity-80"/>
+              <path d="M8 20H13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M10.5 18V22" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <h1 class="font-heading text-lg font-extrabold tracking-tight leading-none text-slate-900 dark:text-slate-100">InstallTrack</h1>
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1">Smart Payoff Manager</p>
+          </div>
+        </div>
+
+        <nav class="space-y-1.5 flex-1">
+          <button onclick="window.InstallTrackApp.switchView('home')" data-view-target="home" class="desktop-nav-link w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-bold text-xs transition text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+            <i data-lucide="layout-dashboard" class="h-4 w-4"></i>
+            <span>Home & Schedule</span>
+          </button>
+          <button onclick="window.InstallTrackApp.switchView('plans')" data-view-target="plans" class="desktop-nav-link w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/40">
+            <i data-lucide="wallet-cards" class="h-4 w-4"></i>
+            <span>Installment Plans</span>
+          </button>
+          <button onclick="window.InstallTrackApp.switchView('activity')" data-view-target="activity" class="desktop-nav-link w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/40">
+            <i data-lucide="history" class="h-4 w-4"></i>
+            <span>Activity Ledger</span>
+          </button>
+          <button onclick="window.InstallTrackApp.switchView('more')" data-view-target="more" class="desktop-nav-link w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/40">
+            <i data-lucide="sliders" class="h-4 w-4"></i>
+            <span>Settings & Data</span>
+          </button>
+        </nav>
+
+        <div class="pt-4 border-t border-slate-200/60 dark:border-slate-800/60">
+          <button onclick="window.InstallTrackApp.openModal()" type="button" class="w-full flex items-center justify-center gap-2 rounded-2xl py-3 px-4 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-md transition">
+            <i data-lucide="plus" class="h-4 w-4 stroke-[2.5]"></i>
+            <span>New Installment</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- MAIN APP CONTENT AREA -->
+      <div class="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+
+        <header class="shrink-0 z-30 w-full glass-header safe-top px-4 py-3 lg:px-8">
+          <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <svg class="h-5 w-5" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="6" width="26" height="20" rx="6" stroke="currentColor" stroke-width="2.2"/>
+                  <path d="M3 13H29" stroke="currentColor" stroke-width="2" class="opacity-40"/>
+                  <circle cx="21" cy="20" r="3.5" fill="currentColor"/>
+                  <path d="M8 20H13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <h1 class="font-heading font-extrabold text-base md:text-lg leading-tight text-slate-900 dark:text-slate-100">InstallTrack</h1>
+                <p id="header-subtitle" class="text-[10px] font-medium text-slate-500 dark:text-slate-400">Dashboard & Schedule</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button id="theme-toggle" type="button" class="rounded-xl p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/50 transition" aria-label="Toggle color theme">
+                <i data-lucide="sun" class="h-4 w-4"></i>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main class="main-viewport px-4 py-5 md:px-8 no-scrollbar">
+          <div class="mx-auto max-w-6xl pb-24 lg:pb-12 space-y-6">
+
+            <!-- 1. HOME / DASHBOARD VIEW -->
+            <section id="home-view" class="app-view active-view space-y-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p id="greeting-text" class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Welcome Back</p>
+                  <h2 class="font-heading text-xl md:text-2xl font-extrabold text-slate-900 dark:text-slate-100">Financial Overview</h2>
+                </div>
+              </div>
+
+              <div class="glass-card-elevated rounded-3xl p-5 md:p-6 relative overflow-hidden">
+                <div class="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"></div>
+
+                <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between relative z-10">
+                  <div>
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Remaining Balance</p>
+                    <h3 id="overall-remaining" class="text-3xl md:text-4xl font-extrabold tracking-tight mt-1 text-slate-900 dark:text-slate-100">₱0.00</h3>
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                      Out of <span id="overall-total" class="font-bold text-slate-700 dark:text-slate-300">₱0.00</span> total committed
+                    </p>
+                  </div>
+
+                  <div class="text-left md:text-right">
+                    <span id="overall-percent" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">0%</span>
+                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Payoff Progress</p>
+                  </div>
+                </div>
+
+                <div class="mt-5 h-3 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80 p-0.5 relative z-10">
+                  <div id="overall-progress-bar" class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-700 ease-out" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div id="stat-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+
+              <div class="grid gap-4 lg:grid-cols-2">
+                <div class="glass-card rounded-3xl p-5 flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                        <i data-lucide="zap" class="h-3 w-3"></i> Priority Due Next
+                      </span>
+                      <span id="featured-status"></span>
+                    </div>
+
+                    <h3 id="featured-plan-name" class="font-heading text-lg md:text-xl font-bold mt-2 text-slate-900 dark:text-slate-100 truncate">No Active Plans</h3>
+                    <p id="featured-merchant" class="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 truncate"></p>
+                    <p id="featured-detail" class="mt-3 text-xs font-medium text-slate-700 dark:text-slate-300"></p>
+                  </div>
+
+                  <div class="mt-6">
+                    <div class="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                      <div id="featured-progress" class="h-full rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2 flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                      <span id="progress-count">0 of 0 installments</span>
+                      <span id="progress-percent">0%</span>
+                    </div>
+
+                    <div id="featured-action-container" class="mt-4 hidden">
+                      <button id="featured-pay-btn" type="button" class="w-full flex items-center justify-center gap-2 rounded-2xl py-2.5 px-4 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-sm transition">
+                        <i data-lucide="check-circle" class="h-4 w-4"></i> Record Payment Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="glass-card rounded-3xl p-5">
+                  <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Upcoming Payments</h3>
+                    <button onclick="window.InstallTrackApp.switchView('plans')" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Manage Plans</button>
+                  </div>
+                  <div id="upcoming-list" class="space-y-2.5"></div>
+                </div>
+              </div>
+
+              <!-- DASHBOARD CALENDAR -->
+              <div class="glass-card rounded-3xl p-4 sm:p-5 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800/80 pb-3">
+                  <div>
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Schedule Calendar</h3>
+                    <p id="calendar-month-title" class="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-0.5"></p>
+                  </div>
+                  <div class="flex items-center gap-1.5 self-end sm:self-auto">
+                    <button id="today-month" class="rounded-xl px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition">Today</button>
+                    <button id="prev-month" class="rounded-xl p-1.5 text-slate-600 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/50" aria-label="Previous month"><i data-lucide="chevron-left" class="h-4 w-4"></i></button>
+                    <button id="next-month" class="rounded-xl p-1.5 text-slate-600 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/50" aria-label="Next month"><i data-lucide="chevron-right" class="h-4 w-4"></i></button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-7 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 pt-1">
+                  <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                </div>
+
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 p-1"></div>
+              </div>
+            </section>
+
+            <!-- 2. PLANS VIEW -->
+            <section id="plans-view" class="app-view space-y-5">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 class="font-heading text-xl md:text-2xl font-extrabold text-slate-900 dark:text-slate-100">Installment Plans</h2>
+                  <p id="plans-count" class="text-xs font-medium text-slate-500 dark:text-slate-400">Manage all ongoing financial commitments</p>
+                </div>
+                <button onclick="window.InstallTrackApp.openModal()" type="button" class="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-md transition">
+                  <i data-lucide="plus" class="h-4 w-4 stroke-[2.5]"></i> Add New Plan
+                </button>
+              </div>
+
+              <!-- Controls -->
+              <div class="glass-card rounded-3xl p-3.5 space-y-3">
+                <div class="relative w-full">
+                  <i data-lucide="search" class="absolute left-3.5 top-3 h-4 w-4 text-slate-400"></i>
+                  <input id="search-input" type="search" class="w-full rounded-2xl py-2.5 pl-10 pr-4 text-xs font-medium" placeholder="Search plan, merchant, notes...">
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2 flex-1">
+                    <select id="filter-select" class="rounded-2xl px-3 py-2 text-xs font-bold">
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active Plans</option>
+                      <option value="pending">Pending / Unpaid</option>
+                      <option value="partially_paid">Partially Paid</option>
+                      <option value="paid">Fully Paid</option>
+                      <option value="overdue">Overdue</option>
+                      <option value="paused">Paused</option>
+                      <option value="completed">Completed</option>
+                    </select>
+
+                    <select id="sort-select" class="rounded-2xl px-3 py-2 text-xs font-bold">
+                      <option value="due">Sort: Next Due Date</option>
+                      <option value="newest">Sort: Newest Added</option>
+                      <option value="oldest">Sort: Oldest Added</option>
+                      <option value="highest_total">Sort: Highest Total</option>
+                      <option value="highest_remaining">Sort: Highest Remaining</option>
+                      <option value="lowest_remaining">Sort: Lowest Remaining</option>
+                      <option value="name_asc">Sort: Name A-Z</option>
+                      <option value="name_desc">Sort: Name Z-A</option>
+                    </select>
+                  </div>
+
+                  <div class="flex rounded-2xl p-1 bg-slate-200/80 dark:bg-slate-800/60 shrink-0">
+                    <button data-layout="grid" class="layout-btn rounded-xl p-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/15" aria-label="Grid layout"><i data-lucide="layout-grid" class="h-4 w-4"></i></button>
+                    <button data-layout="table" class="layout-btn rounded-xl p-1.5 text-slate-500 dark:text-slate-400" aria-label="Table layout"><i data-lucide="table-2" class="h-4 w-4"></i></button>
+                    <button data-layout="compact" class="layout-btn rounded-xl p-1.5 text-slate-500 dark:text-slate-400" aria-label="Compact layout"><i data-lucide="list" class="h-4 w-4"></i></button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="plan-list"></div>
+
+              <div id="empty-plans" class="hidden glass-card rounded-3xl p-10 text-center">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 mb-3">
+                  <i data-lucide="inbox" class="h-6 w-6"></i>
+                </div>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">No installment plans found</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">Try adjusting your search terms or filters to locate your plan.</p>
+                <button onclick="window.InstallTrackApp.openModal()" type="button" class="mt-4 inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold text-white bg-emerald-600 dark:bg-emerald-400 dark:text-slate-950">
+                  <i data-lucide="plus" class="h-3.5 w-3.5 stroke-[2.5]"></i> Add New Plan
+                </button>
+              </div>
+            </section>
+
+            <!-- 3. ACTIVITY VIEW -->
+            <section id="activity-view" class="app-view space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="font-heading text-xl md:text-2xl font-extrabold text-slate-900 dark:text-slate-100">Activity Ledger</h2>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Recent recorded payment entries</p>
+                </div>
+              </div>
+
+              <div id="activity-timeline" class="space-y-4"></div>
+
+              <div id="empty-activity" class="hidden glass-card rounded-3xl p-10 text-center">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-200/80 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 mb-3">
+                  <i data-lucide="history" class="h-6 w-6"></i>
+                </div>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">No payment history yet</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Record payments on active plans to start tracking your history here.</p>
+              </div>
+            </section>
+
+            <!-- 4. MORE / SETTINGS VIEW -->
+            <section id="more-view" class="app-view space-y-5">
+              <div>
+                <h2 class="font-heading text-xl md:text-2xl font-extrabold text-slate-900 dark:text-slate-100">Settings & Data</h2>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Manage application settings and local storage backups</p>
+              </div>
+
+              <div class="glass-card rounded-3xl p-5 space-y-4">
+                <div class="flex items-center gap-3">
+                  <div class="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><i data-lucide="palette" class="h-5 w-5"></i></div>
+                  <div>
+                    <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">Appearance</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Customize display theme styling</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                  <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">Dark Theme Mode</span>
+                  <button id="theme-switch-btn" type="button" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-0 bg-emerald-500 transition-colors duration-200 ease-in-out focus:outline-none">
+                    <span id="theme-switch-thumb" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-slate-950 shadow transition duration-200 ease-in-out translate-x-5 mt-0.5 ml-0.5"></span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="glass-card rounded-3xl p-5 space-y-4">
+                <div class="flex items-center gap-3">
+                  <div class="p-2.5 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400"><i data-lucide="database" class="h-5 w-5"></i></div>
+                  <div>
+                    <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">Data Management</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Export, import, or clear local JSON data</p>
+                  </div>
+                </div>
+
+                <div class="grid gap-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800 sm:grid-cols-2">
+                  <button id="export-btn" type="button" class="flex items-center justify-center gap-2 rounded-2xl p-3 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition">
+                    <i data-lucide="download" class="h-4 w-4"></i> Export JSON Data
+                  </button>
+
+                  <label class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl p-3 text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition">
+                    <i data-lucide="upload" class="h-4 w-4"></i> Import JSON Data
+                    <input id="import-file" type="file" accept=".json,application/json" class="hidden">
+                  </label>
+                </div>
+
+                <div class="pt-2">
+                  <button id="clear-btn" type="button" class="w-full flex items-center justify-center gap-2 rounded-2xl p-3 text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i> Clear All Storage Data
+                  </button>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </main>
+
+        <nav class="shrink-0 z-40 w-full glass-bottom-nav safe-bottom py-1.5 px-3 lg:hidden">
+          <div class="mx-auto max-w-md grid grid-cols-5 gap-1 items-center">
+            <button onclick="window.InstallTrackApp.switchView('home')" data-view-target="home" class="nav-tab active flex flex-col items-center py-1 rounded-2xl text-[10px] font-bold">
+              <div class="nav-icon-wrapper p-1.5 rounded-xl transition-all"><i data-lucide="layout-dashboard" class="h-4 w-4"></i></div>
+              <span class="mt-0.5">Home</span>
+            </button>
+
+            <button onclick="window.InstallTrackApp.switchView('plans')" data-view-target="plans" class="nav-tab flex flex-col items-center py-1 rounded-2xl text-[10px] font-bold">
+              <div class="nav-icon-wrapper p-1.5 rounded-xl transition-all"><i data-lucide="wallet-cards" class="h-4 w-4"></i></div>
+              <span class="mt-0.5">Plans</span>
+            </button>
+
+            <button onclick="window.InstallTrackApp.openModal()" type="button" class="flex flex-col items-center justify-center -mt-4 active:scale-95 transition-transform" aria-label="Add installment plan">
+              <div class="h-11 w-11 rounded-full bg-emerald-600 text-white dark:bg-emerald-400 dark:text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <i data-lucide="plus" class="h-6 w-6 stroke-[2.5]"></i>
+              </div>
+              <span class="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">Add</span>
+            </button>
+
+            <button onclick="window.InstallTrackApp.switchView('activity')" data-view-target="activity" class="nav-tab flex flex-col items-center py-1 rounded-2xl text-[10px] font-bold">
+              <div class="nav-icon-wrapper p-1.5 rounded-xl transition-all"><i data-lucide="history" class="h-4 w-4"></i></div>
+              <span class="mt-0.5">Activity</span>
+            </button>
+
+            <button onclick="window.InstallTrackApp.switchView('more')" data-view-target="more" class="nav-tab flex flex-col items-center py-1 rounded-2xl text-[10px] font-bold">
+              <div class="nav-icon-wrapper p-1.5 rounded-xl transition-all"><i data-lucide="sliders" class="h-4 w-4"></i></div>
+              <span class="mt-0.5">More</span>
+            </button>
+          </div>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT INSTALLMENT PLAN -->
+  <div id="modal" class="fixed inset-0 z-50 hidden items-end sm:items-center sm:justify-center bg-slate-950/40 backdrop-blur-md p-0 sm:p-4">
+    <div class="glass-modal max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl sm:max-w-xl no-scrollbar">
+      <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700/60 rounded-full mx-auto mb-3 sm:hidden"></div>
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-slate-800">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Plan Configuration</p>
+          <h2 id="modal-title" class="font-heading text-lg font-bold text-slate-900 dark:text-slate-100">Installment Plan</h2>
+        </div>
+        <button id="close-modal" type="button" class="rounded-xl p-2 text-slate-500 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/50" aria-label="Close modal"><i data-lucide="x" class="h-5 w-5"></i></button>
+      </div>
+
+      <form id="plan-form" class="mt-4 space-y-4">
+        <input id="plan-id" type="hidden">
+
+        <div class="grid gap-3.5 sm:grid-cols-2">
+          <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+            <span>Plan Name *</span>
+            <input id="plan-name" required type="text" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium" placeholder="e.g. MacBook Air M3">
+          </label>
+
+          <div class="relative block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+            <span>Merchant / Lender *</span>
+            <input id="merchant" required type="text" autocomplete="off" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium" placeholder="e.g. Apple Store / Credit Card">
+            <div id="merchant-suggestions" class="absolute left-0 right-0 top-full mt-1.5 z-30 hidden glass-modal rounded-2xl p-1.5 shadow-xl max-h-40 overflow-y-auto no-scrollbar space-y-0.5 border border-slate-200/80 dark:border-slate-700"></div>
+          </div>
+
+          <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+            <span>Total Amount (₱) *</span>
+            <input id="amount" required min="1" step="0.01" type="number" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium" placeholder="0.00">
+          </label>
+          <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+            <span>Tenure (Months) *</span>
+            <input id="tenure" required min="1" max="120" type="number" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium" value="12">
+          </label>
+          <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+            <span>Start Date *</span>
+            <input id="start-date" required type="date" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium">
+          </label>
+          <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+            <span>Monthly Due Day (1-31) *</span>
+            <input id="due-day" required min="1" max="31" type="number" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium" value="15">
+          </label>
+        </div>
+
+        <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+          <span>Status</span>
+          <select id="status" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-bold">
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="completed">Completed</option>
+          </select>
+        </label>
+
+        <div class="rounded-2xl p-4 bg-emerald-500/10 border-0">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Estimated Financial Breakdown</p>
+          <div class="mt-2 grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Regular Monthly Payment</p>
+              <strong id="monthly-result" class="text-sm font-extrabold text-slate-900 dark:text-slate-100">₱0.00</strong>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Total Remaining Balance</p>
+              <strong id="remaining-result" class="text-sm font-extrabold text-slate-900 dark:text-slate-100">₱0.00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-3.5 sm:grid-cols-2">
+          <div>
+            <label for="product-upload" class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+              <span>Product Image <span class="font-normal text-slate-500 dark:text-slate-400">(Optional)</span></span>
+            </label>
+            <input id="product-upload" type="file" accept="image/*" class="mt-1 block w-full text-xs text-slate-500 dark:text-slate-400 file:mr-2 file:rounded-xl file:border-0 file:bg-emerald-500/10 file:px-2.5 file:py-1.5 file:text-xs file:font-bold file:text-emerald-600 dark:file:text-emerald-400">
+            <div id="product-container" class="mt-2 hidden relative rounded-2xl overflow-hidden">
+              <img id="product-preview" class="h-28 w-full object-cover" alt="Product preview">
+              <button id="remove-product" type="button" class="absolute top-2 right-2 rounded-xl bg-slate-900/80 p-1.5 text-white hover:bg-rose-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+            </div>
+          </div>
+
+          <div>
+            <label for="receipt-upload" class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+              <span>Receipt Image <span class="font-normal text-slate-500 dark:text-slate-400">(Optional)</span></span>
+            </label>
+            <input id="receipt-upload" type="file" accept="image/*" class="mt-1 block w-full text-xs text-slate-500 dark:text-slate-400 file:mr-2 file:rounded-xl file:border-0 file:bg-emerald-500/10 file:px-2.5 file:py-1.5 file:text-xs file:font-bold file:text-emerald-600 dark:file:text-emerald-400">
+            <div id="receipt-container" class="mt-2 hidden relative rounded-2xl overflow-hidden">
+              <img id="receipt-preview" class="h-28 w-full object-cover" alt="Receipt preview">
+              <button id="remove-receipt" type="button" class="absolute top-2 right-2 rounded-xl bg-slate-900/80 p-1.5 text-white hover:bg-rose-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <button id="save-plan" type="submit" class="w-full rounded-2xl py-3 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-md transition">
+          Save Installment Plan
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PLAN DETAIL VIEW -->
+  <div id="detail-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center sm:justify-center bg-slate-950/40 backdrop-blur-md p-0 sm:p-4">
+    <div class="glass-modal max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl sm:max-w-2xl no-scrollbar">
+      <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700/60 rounded-full mx-auto mb-3 sm:hidden"></div>
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-slate-800">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Plan Overview</p>
+          <h2 id="detail-plan-name" class="font-heading text-lg sm:text-xl font-extrabold text-slate-900 dark:text-slate-100 truncate">Plan Details</h2>
+        </div>
+        <button id="close-detail-modal" type="button" class="rounded-xl p-2 text-slate-500 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/50" aria-label="Close detail modal"><i data-lucide="x" class="h-5 w-5"></i></button>
+      </div>
+
+      <div id="detail-content" class="mt-4 space-y-5"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: RECORD PAYMENT ENTRY -->
+  <div id="payment-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center sm:justify-center bg-slate-950/40 backdrop-blur-md p-0 sm:p-4">
+    <div class="glass-modal w-full rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl sm:max-w-md">
+      <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700/60 rounded-full mx-auto mb-3 sm:hidden"></div>
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-slate-800">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Payment Entry</p>
+          <h2 id="payment-modal-title" class="font-heading text-lg font-bold text-slate-900 dark:text-slate-100">Record Payment</h2>
+        </div>
+        <button id="close-payment-modal" type="button" class="rounded-xl p-2 text-slate-500 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/50" aria-label="Close payment modal"><i data-lucide="x" class="h-5 w-5"></i></button>
+      </div>
+
+      <form id="payment-form" class="mt-4 space-y-4">
+        <input id="payment-plan-id" type="hidden">
+        <input id="payment-entry-id" type="hidden">
+
+        <div class="rounded-2xl p-3.5 bg-emerald-500/10 border-0 text-xs space-y-1">
+          <p class="flex justify-between font-bold text-slate-800 dark:text-slate-200"><span>Current Remaining:</span> <span id="payment-current-remaining">₱0.00</span></p>
+          <p class="flex justify-between text-[11px] text-slate-500 dark:text-slate-400"><span>After this payment:</span> <span id="payment-after-remaining" class="font-extrabold text-emerald-600 dark:text-emerald-400">₱0.00</span></p>
+        </div>
+
+        <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+          <span>Payment Amount (₱) *</span>
+          <input id="payment-amount" required min="0.01" step="0.01" type="number" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-bold" placeholder="0.00">
+        </label>
+
+        <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+          <span>Payment Date *</span>
+          <input id="payment-date" required type="date" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium">
+        </label>
+
+        <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 space-y-1">
+          <span>Optional Note</span>
+          <input id="payment-note" type="text" class="w-full rounded-2xl px-3.5 py-2.5 text-xs font-medium" placeholder="e.g. Reference #12345 or GCash">
+        </label>
+
+        <button id="save-payment" type="submit" class="w-full rounded-2xl py-3 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-md transition">
+          Submit Payment Record
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CALENDAR DAY DETAIL -->
+  <div id="calendar-day-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center sm:justify-center bg-slate-950/40 backdrop-blur-md p-0 sm:p-4">
+    <div class="glass-modal max-h-[80dvh] w-full overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl sm:max-w-md">
+      <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700/60 rounded-full mx-auto mb-3 sm:hidden"></div>
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-slate-800">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Schedule Details</p>
+          <h2 id="calendar-day-title" class="font-heading text-lg font-bold text-slate-900 dark:text-slate-100">Payments Due</h2>
+        </div>
+        <button id="close-calendar-day-modal" type="button" class="rounded-xl p-2 text-slate-500 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/50"><i data-lucide="x" class="h-5 w-5"></i></button>
+      </div>
+      <div id="calendar-day-list" class="mt-4 space-y-2.5"></div>
+    </div>
+  </div>
+
+  <!-- CONFIRMATION DIALOG MODAL -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 backdrop-blur-md p-4">
+    <div class="glass-modal w-full max-w-xs rounded-3xl p-5 shadow-2xl text-center">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 mb-3">
+        <i data-lucide="alert-triangle" class="h-6 w-6"></i>
+      </div>
+      <h3 id="confirm-modal-title" class="font-heading text-base font-bold text-slate-900 dark:text-slate-100">Are you sure?</h3>
+      <p id="confirm-modal-msg" class="mt-1 text-xs text-slate-500 dark:text-slate-400">This action cannot be undone.</p>
+      <div class="mt-5 flex gap-2">
+        <button id="confirm-modal-cancel" type="button" class="flex-1 rounded-2xl py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Cancel</button>
+        <button id="confirm-modal-action" type="button" class="flex-1 rounded-2xl py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast-banner fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-xs rounded-2xl px-4 py-3 text-center text-xs font-extrabold text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 shadow-2xl lg:bottom-8"></div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      const STORAGE_KEY = 'installtrack-plans-v1';
+      const THEME_KEY = 'installtrack-theme';
+
+      const DEFAULT_LENDERS = [
+        'Apple Store', 'Home Credit', 'BDO Credit Card', 'BPI Express Loan',
+        'Metrobank Card', 'GCash / GGives', 'Maya Credit', 'ShopeePay / SPayLater',
+        'Lazada Loan / LazPayLater', 'In-House Merchant Financing', 'Home Office Co.',
+        'Island Escapes Travel'
+      ];
+
+      const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 });
+      const $ = id => document.getElementById(id);
+
+      const sanitize = str => {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+
+      let plans = [];
+      let currentView = 'home';
+      let layoutMode = 'grid';
+      let calendarDate = new Date();
+      let receiptData = '';
+      let productData = '';
+      let activeDetailPlanId = null;
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      const starterPlans = [
+        {
+          id: 's1',
+          name: 'MacBook Air M3',
+          merchant: 'Apple Store',
+          amount: 64990,
+          tenure: 12,
+          startDate: '2026-05-15',
+          dueDay: 15,
+          status: 'active',
+          receipt: '',
+          productImage: '',
+          payments: [
+            { id: 'p11', amount: 5415.83, date: '2026-05-15', note: 'Downpayment / Installment #1' },
+            { id: 'p12', amount: 5415.83, date: '2026-06-15', note: 'Installment #2' },
+            { id: 'p13', amount: 5415.83, date: '2026-07-15', note: 'Installment #3' }
+          ]
+        },
+        {
+          id: 's2',
+          name: 'Ergonomic Desk Chair',
+          merchant: 'Home Office Co.',
+          amount: 12500,
+          tenure: 6,
+          startDate: '2026-07-08',
+          dueDay: 8,
+          status: 'active',
+          receipt: '',
+          productImage: '',
+          payments: [
+            { id: 'p21', amount: 2083.33, date: '2026-07-08', note: 'Installment #1' }
+          ]
+        }
+      ];
+
+      function loadData() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            plans = starterPlans;
+          } else {
+            const parsed = JSON.parse(raw);
+            plans = migrateData(parsed);
+          }
+        } catch (err) {
+          console.error('Data load error, fallback to defaults:', err);
+          plans = starterPlans;
+        }
+        saveData();
+      }
+
+      function migrateData(rawPlans) {
+        if (!Array.isArray(rawPlans)) return starterPlans;
+
+        return rawPlans.map((p, idx) => {
+          const monthlyEstimate = p.amount && p.tenure ? (p.amount / p.tenure) : 0;
+          let payments = Array.isArray(p.payments) ? p.payments : [];
+
+          if (payments.length === 0 && typeof p.paid === 'number' && p.paid > 0) {
+            const startDate = p.startDate ? new Date(p.startDate + 'T00:00:00') : new Date();
+            for (let i = 0; i < p.paid; i++) {
+              const pDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, Math.min(p.dueDay || 15, 28));
+              payments.push({
+                id: 'migrated_' + idx + '_' + i + '_' + Date.now(),
+                amount: Math.round(monthlyEstimate * 100) / 100,
+                date: pDate.toISOString().slice(0, 10),
+                note: 'Migrated payment entry #' + (i + 1)
+              });
+            }
+          }
+
+          return {
+            id: p.id || 'plan_' + Date.now() + '_' + idx,
+            name: p.name || 'Unnamed Plan',
+            merchant: p.merchant || 'General Merchant',
+            amount: Number(p.amount) || 0,
+            tenure: Number(p.tenure) || 1,
+            startDate: p.startDate || new Date().toISOString().slice(0, 10),
+            dueDay: Number(p.dueDay) || 15,
+            status: p.status || 'active',
+            receipt: p.receipt || '',
+            productImage: p.productImage || '',
+            payments: payments
+          };
+        });
+      }
+
+      function saveData() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+        } catch (e) {
+          toast('Storage limit exceeded or unavailable.');
+        }
+      }
+
+      function calcPlan(p) {
+        const totalAmount = Number(p.amount) || 0;
+        const tenure = Math.max(1, Number(p.tenure) || 1);
+        const monthlyAmount = totalAmount / tenure;
+
+        const totalPaid = p.payments.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        const remaining = Math.max(0, totalAmount - totalPaid);
+
+        const paidInstallments = Math.min(tenure, Math.floor((totalPaid / (monthlyAmount || 1)) + 0.001));
+        const remainingInstallments = Math.max(0, tenure - paidInstallments);
+
+        const progressPercent = totalAmount > 0 ? Math.min(100, Math.round((totalPaid / totalAmount) * 100)) : 0;
+
+        const baseStart = p.startDate ? new Date(p.startDate + 'T00:00:00') : new Date();
+        const nextDueDate = new Date(baseStart.getFullYear(), baseStart.getMonth() + paidInstallments, Math.min(p.dueDay || 15, 28));
+
+        const isOverdue = p.status === 'active' && remaining > 0.01 && nextDueDate < today;
+
+        let calculatedStatus = 'pending';
+        if (totalPaid >= totalAmount && totalAmount > 0) {
+          calculatedStatus = 'paid';
+        } else if (totalPaid > 0) {
+          calculatedStatus = 'partially_paid';
+        }
+
+        return {
+          totalAmount,
+          tenure,
+          monthlyAmount,
+          totalPaid,
+          remaining,
+          paidInstallments,
+          remainingInstallments,
+          progressPercent,
+          nextDueDate,
+          isOverdue,
+          calculatedStatus
+        };
+      }
+
+      function getStatusBadge(p) {
+        const c = calcPlan(p);
+
+        if (p.status === 'paused') {
+          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-amber-500/15 text-amber-700 dark:text-amber-400">Paused</span>';
+        }
+        if (p.status === 'completed' || c.calculatedStatus === 'paid') {
+          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">Fully Paid</span>';
+        }
+        if (c.isOverdue) {
+          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-rose-500/15 text-rose-700 dark:text-rose-400">Overdue</span>';
+        }
+        if (c.calculatedStatus === 'partially_paid') {
+          return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-blue-500/15 text-blue-700 dark:text-blue-400">Partially Paid</span>';
+        }
+        return '<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Unpaid</span>';
+      }
+
+      function getAllLenders() {
+        const set = new Set(DEFAULT_LENDERS);
+        plans.forEach(p => {
+          if (p.merchant) set.add(p.merchant);
+        });
+        return Array.from(set);
+      }
+
+      function showLenderSuggestions() {
+        const val = $('merchant').value.toLowerCase().trim();
+        const lenders = getAllLenders().filter(l => l.toLowerCase().includes(val));
+        const container = $('merchant-suggestions');
+
+        if (lenders.length === 0) {
+          container.classList.add('hidden');
+          return;
+        }
+
+        container.innerHTML = lenders.map(lender => `
+          <button type="button" class="w-full text-left px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-emerald-500/15 hover:text-emerald-600 dark:hover:text-emerald-400 transition flex items-center justify-between">
+            <span>${sanitize(lender)}</span>
+            <i data-lucide="corner-down-left" class="h-3 w-3 opacity-40"></i>
+          </button>
+        `).join('');
+
+        container.querySelectorAll('button').forEach((btn, idx) => {
+          btn.onclick = () => {
+            $('merchant').value = lenders[idx];
+            container.classList.add('hidden');
+          };
+        });
+
+        container.classList.remove('hidden');
+        lucide.createIcons();
+      }
+
+      function switchView(viewName) {
+        currentView = viewName;
+
+        document.querySelectorAll('.app-view').forEach(v => {
+          v.classList.remove('active-view');
+        });
+        const targetViewEl = $(viewName + '-view');
+        if (targetViewEl) targetViewEl.classList.add('active-view');
+
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+          tab.classList.toggle('active', tab.dataset.viewTarget === viewName);
+        });
+
+        document.querySelectorAll('.desktop-nav-link').forEach(link => {
+          const isActive = link.dataset.viewTarget === viewName;
+          link.classList.toggle('text-emerald-600', isActive);
+          link.classList.toggle('dark:text-emerald-400', isActive);
+          link.classList.toggle('bg-emerald-500/10', isActive);
+          link.classList.toggle('text-slate-600', !isActive);
+          link.classList.toggle('dark:text-slate-400', !isActive);
+        });
+
+        const subtitles = {
+          home: 'Dashboard & Schedule',
+          plans: 'Installment Manager',
+          activity: 'Recent Payment History',
+          more: 'Settings & Storage'
+        };
+        $('header-subtitle').textContent = subtitles[viewName] || 'Overview';
+
+        if (viewName === 'home') {
+          renderDashboard();
+          renderCalendar();
+        }
+        if (viewName === 'plans') renderPlans();
+        if (viewName === 'activity') renderActivity();
+
+        document.querySelector('.main-viewport').scrollTop = 0;
+      }
+
+      function renderDashboard() {
+        let totalPlans = plans.length;
+        let totalCommitment = 0;
+        let totalPaid = 0;
+        let totalRemaining = 0;
+        let expectedMonthly = 0;
+        let overdueCount = 0;
+
+        plans.forEach(p => {
+          const c = calcPlan(p);
+          totalCommitment += c.totalAmount;
+          totalPaid += c.totalPaid;
+          totalRemaining += c.remaining;
+          if (p.status === 'active' && c.remaining > 0) {
+            expectedMonthly += c.monthlyAmount;
+          }
+          if (c.isOverdue) {
+            overdueCount++;
+          }
+        });
+
+        const overallPercent = totalCommitment > 0 ? Math.min(100, Math.round((totalPaid / totalCommitment) * 100)) : 0;
+
+        $('overall-remaining').textContent = money.format(totalRemaining);
+        $('overall-total').textContent = money.format(totalCommitment);
+        $('overall-percent').textContent = overallPercent + '%';
+        $('overall-progress-bar').style.width = overallPercent + '%';
+
+        const hour = new Date().getHours();
+        let greeting = 'Good morning';
+        if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+        if (hour >= 17) greeting = 'Good evening';
+        $('greeting-text').textContent = greeting;
+
+        const stats = [
+          ['Active Plans', totalPlans, 'wallet-cards', 'text-emerald-600 dark:text-emerald-400'],
+          ['Monthly Due', money.format(expectedMonthly), 'calendar-check', 'text-emerald-600 dark:text-emerald-400'],
+          ['Total Paid', money.format(totalPaid), 'check-circle-2', 'text-emerald-600 dark:text-emerald-400'],
+          ['Overdue Plans', overdueCount, 'alert-circle', overdueCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400']
+        ];
+
+        $('stat-grid').innerHTML = stats.map(s => `
+          <article class="glass-card rounded-2xl p-3.5 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">${s[0]}</p>
+              <i data-lucide="${s[2]}" class="h-4 w-4 ${s[3]}"></i>
+            </div>
+            <p class="mt-2 text-base font-extrabold sm:text-lg ${s[0] === 'Overdue Plans' && s[1] > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'}">${s[1]}</p>
+          </article>
+        `).join('');
+
+        const activePlans = plans.filter(p => p.status === 'active' && calcPlan(p).remaining > 0);
+        const sortedByDue = [...activePlans].sort((a,b) => calcPlan(a).nextDueDate - calcPlan(b).nextDueDate);
+        const featured = sortedByDue[0] || plans[0];
+
+        if (featured) {
+          const c = calcPlan(featured);
+          $('featured-plan-name').textContent = featured.name;
+          $('featured-merchant').textContent = featured.merchant;
+          $('featured-detail').textContent = `${money.format(c.monthlyAmount)} / month · Due: ${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+          $('featured-progress').style.width = c.progressPercent + '%';
+          $('progress-count').textContent = `${c.paidInstallments} of ${c.tenure} installments paid`;
+          $('progress-percent').textContent = c.progressPercent + '%';
+          $('featured-status').innerHTML = getStatusBadge(featured);
+
+          $('featured-action-container').classList.remove('hidden');
+          $('featured-pay-btn').onclick = () => openPaymentModal(featured.id);
+        } else {
+          $('featured-plan-name').textContent = 'All Caught Up!';
+          $('featured-merchant').textContent = 'No outstanding installments.';
+          $('featured-detail').textContent = 'Create a plan to begin tracking your payoffs.';
+          $('featured-progress').style.width = '0%';
+          $('progress-count').textContent = '0 of 0 installments';
+          $('progress-percent').textContent = '100%';
+          $('featured-status').innerHTML = '';
+          $('featured-action-container').classList.add('hidden');
+        }
+
+        const upcoming = [...activePlans].sort((a,b) => calcPlan(a).nextDueDate - calcPlan(b).nextDueDate).slice(0, 4);
+        $('upcoming-list').innerHTML = upcoming.length
+          ? upcoming.map(p => {
+            const c = calcPlan(p);
+            return `
+              <div onclick="window.InstallTrackApp.openDetailModal('${p.id}')" class="flex items-center justify-between rounded-2xl p-2.5 bg-slate-200/50 dark:bg-slate-800/30 hover:bg-slate-200/80 dark:hover:bg-slate-800/60 transition cursor-pointer">
+                <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                  ${p.productImage ? `<img src="${p.productImage}" class="h-9 w-9 rounded-xl object-cover shrink-0" alt="product">` : ''}
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${sanitize(p.name)}</p>
+                    <p class="text-[10px] font-medium text-slate-500 dark:text-slate-400">${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} · ${money.format(c.monthlyAmount)}</p>
+                  </div>
+                </div>
+                ${getStatusBadge(p)}
+              </div>`;
+          }).join('')
+          : '<p class="text-xs font-medium py-4 text-center text-slate-500 dark:text-slate-400">No upcoming installment payments due.</p>';
+
+        lucide.createIcons();
+      }
+
+      function getFilteredPlans() {
+        const query = $('search-input').value.toLowerCase().trim();
+        const filter = $('filter-select').value;
+        const sort = $('sort-select').value;
+
+        return plans.filter(p => {
+          const c = calcPlan(p);
+
+          let matchesFilter = true;
+          if (filter === 'active') matchesFilter = p.status === 'active';
+          else if (filter === 'paused') matchesFilter = p.status === 'paused';
+          else if (filter === 'completed') matchesFilter = p.status === 'completed' || c.calculatedStatus === 'paid';
+          else if (filter === 'pending') matchesFilter = c.calculatedStatus === 'pending' && p.status !== 'paused';
+          else if (filter === 'partially_paid') matchesFilter = c.calculatedStatus === 'partially_paid' && p.status !== 'paused';
+          else if (filter === 'paid') matchesFilter = c.calculatedStatus === 'paid';
+          else if (filter === 'overdue') matchesFilter = c.isOverdue;
+
+          const notesText = p.payments.map(x => x.note || '').join(' ').toLowerCase();
+          const matchesQuery = (p.name + ' ' + p.merchant + ' ' + notesText).toLowerCase().includes(query);
+
+          return matchesFilter && matchesQuery;
+        }).sort((a,b) => {
+          const ca = calcPlan(a);
+          const cb = calcPlan(b);
+
+          if (sort === 'name_asc') return a.name.localeCompare(b.name);
+          if (sort === 'name_desc') return b.name.localeCompare(a.name);
+          if (sort === 'highest_total') return cb.totalAmount - ca.totalAmount;
+          if (sort === 'highest_remaining') return cb.remaining - ca.remaining;
+          if (sort === 'lowest_remaining') return ca.remaining - cb.remaining;
+          if (sort === 'newest') return (b.id || '').localeCompare(a.id || '');
+          if (sort === 'oldest') return (a.id || '').localeCompare(b.id || '');
+          return ca.nextDueDate - cb.nextDueDate;
+        });
+      }
+
+      function renderPlanCard(p) {
+        const c = calcPlan(p);
+        return `
+          <article class="plan-card glass-card rounded-3xl p-4 flex flex-col justify-between relative overflow-hidden">
+            <div>
+              ${p.productImage ? `
+                <div class="h-28 w-full -mt-4 -mx-4 mb-3 overflow-hidden relative border-b border-slate-200/60 dark:border-slate-800" style="width: calc(100% + 2rem);">
+                  <img src="${p.productImage}" class="h-full w-full object-cover" alt="${sanitize(p.name)}">
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
+                </div>
+              ` : ''}
+
+              <div class="flex justify-between items-start gap-2">
+                <div class="min-w-0 flex-1">
+                  <h3 class="truncate font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100" title="${sanitize(p.name)}">${sanitize(p.name)}</h3>
+                  <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">${sanitize(p.merchant)}</p>
+                </div>
+                <div class="shrink-0">${getStatusBadge(p)}</div>
+              </div>
+
+              <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Total Plan</p>
+                  <p class="font-black text-sm text-slate-800 dark:text-slate-200">${money.format(c.totalAmount)}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Remaining</p>
+                  <p class="font-black text-sm text-emerald-600 dark:text-emerald-400">${money.format(c.remaining)}</p>
+                </div>
+              </div>
+
+              <div class="mt-3 text-xs">
+                <div class="flex justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  <span>Next Due: <b class="text-slate-800 dark:text-slate-200">${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</b></span>
+                  <span><b class="text-slate-800 dark:text-slate-200">${money.format(c.monthlyAmount)}</b> / mo</span>
+                </div>
+              </div>
+
+              <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                <div class="h-full rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-500" style="width:${c.progressPercent}%"></div>
+              </div>
+              <p class="mt-1 text-right text-[10px] font-bold text-slate-500 dark:text-slate-400">${c.progressPercent}% Paid (${c.paidInstallments}/${c.tenure})</p>
+            </div>
+
+            <div class="mt-4 flex items-center gap-1.5 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+              <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}')" type="button" class="flex-1 rounded-2xl py-2 px-2 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-sm transition ${c.remaining <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${c.remaining <= 0 ? 'disabled' : ''}>+ Pay</button>
+              <button onclick="window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="rounded-2xl bg-slate-200/80 dark:bg-slate-800/80 px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 transition">View</button>
+              <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="rounded-2xl bg-slate-200/80 dark:bg-slate-800/80 px-2.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 transition" aria-label="Edit plan"><i data-lucide="edit-3" class="h-3.5 w-3.5"></i></button>
+              <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 px-2.5 py-2 text-xs font-bold transition" aria-label="Delete plan"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button>
+            </div>
+          </article>`;
+      }
+
+      function renderPlans() {
+        const list = getFilteredPlans();
+        $('plans-count').textContent = `Showing ${list.length} of ${plans.length} total plans`;
+        $('empty-plans').classList.toggle('hidden', list.length > 0);
+
+        if (layoutMode === 'grid') {
+          $('plan-list').innerHTML = '<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' + list.map(renderPlanCard).join('') + '</div>';
+        } else if (layoutMode === 'table') {
+          // MIN WIDTH CONTAINER ADDED TO FORCE HORIZONTAL SCROLL ON MOBILE SCREENS
+          $('plan-list').innerHTML = `
+            <div class="overflow-x-auto rounded-3xl glass-card w-full">
+              <table class="w-full text-left text-xs min-w-[650px]">
+                <thead class="bg-slate-200/60 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 border-b border-slate-200/60 dark:border-slate-800">
+                  <tr class="uppercase text-[10px] font-black tracking-wider">
+                    <th class="p-3.5">Plan / Merchant</th>
+                    <th class="p-3.5">Monthly</th>
+                    <th class="p-3.5">Total Paid</th>
+                    <th class="p-3.5">Remaining</th>
+                    <th class="p-3.5">Next Due</th>
+                    <th class="p-3.5">Status</th>
+                    <th class="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/60 dark:divide-slate-800">
+                  ${list.map(p => {
+                    const c = calcPlan(p);
+                    return `
+                      <tr class="hover:bg-slate-200/40 dark:hover:bg-slate-800/30 transition">
+                        <td class="p-3.5 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                          ${p.productImage ? `<img src="${p.productImage}" class="h-7 w-7 rounded-lg object-cover shrink-0" alt="product">` : ''}
+                          <div class="min-w-0">
+                            <span class="truncate block font-bold" title="${sanitize(p.name)}">${sanitize(p.name)}</span>
+                            <span class="font-normal text-[11px] text-slate-500 dark:text-slate-400 truncate block">${sanitize(p.merchant)}</span>
+                          </div>
+                        </td>
+                        <td class="p-3.5 font-semibold text-slate-800 dark:text-slate-200">${money.format(c.monthlyAmount)}</td>
+                        <td class="p-3.5 font-semibold text-slate-800 dark:text-slate-200">${money.format(c.totalPaid)}</td>
+                        <td class="p-3.5 font-black text-emerald-600 dark:text-emerald-400">${money.format(c.remaining)}</td>
+                        <td class="p-3.5 font-semibold text-slate-700 dark:text-slate-300">${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</td>
+                        <td class="p-3.5">${getStatusBadge(p)}</td>
+                        <td class="p-3.5 text-right space-x-1">
+                          <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-emerald-600 text-white dark:bg-emerald-400 dark:text-slate-950 text-[11px] ${c.remaining <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${c.remaining <= 0 ? 'disabled' : ''}>Pay</button>
+                          <button onclick="window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[11px]">View</button>
+                          <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[11px]">Edit</button>
+                          <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="font-bold px-2 py-1 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[11px]">Del</button>
+                        </td>
+                      </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>`;
+        } else {
+          $('plan-list').innerHTML = '<div class="space-y-2.5">' + list.map(p => {
+            const c = calcPlan(p);
+            return `
+              <div class="flex items-center justify-between gap-2 rounded-2xl p-3.5 glass-card hover:bg-slate-200/50 dark:hover:bg-slate-800/40 transition">
+                <div class="flex items-center gap-3 min-w-0 pr-2">
+                  ${p.productImage ? `<img src="${p.productImage}" class="h-8 w-8 rounded-xl object-cover shrink-0" alt="product">` : ''}
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${sanitize(p.name)} <span class="font-normal text-slate-500 dark:text-slate-400">(${sanitize(p.merchant)})</span></p>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400">Due day ${p.dueDay} · Remaining: ${money.format(c.remaining)}</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="font-black text-xs text-emerald-600 dark:text-emerald-400">${money.format(c.monthlyAmount)}/mo</span>
+                  <button onclick="window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="rounded-xl px-2.5 py-1.5 text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">View</button>
+                  <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="rounded-xl px-2.5 py-1.5 text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Edit</button>
+                  <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="rounded-xl px-2 py-1.5 text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button>
+                </div>
+              </div>`;
+          }).join('') + '</div>';
+        }
+
+        lucide.createIcons();
+      }
+
+      function renderCalendar() {
+        const year = calendarDate.getFullYear();
+        const month = calendarDate.getMonth();
+        const firstDayIdx = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        $('calendar-month-title').textContent = new Date(year, month).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+
+        let html = Array(firstDayIdx).fill('<div class="calendar-cell opacity-20 bg-slate-200/40 dark:bg-slate-900/30 rounded-2xl"></div>').join('');
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const currentDate = new Date(year, month, day);
+          const isToday = currentDate.toDateString() === today.toDateString();
+
+          const dayPlans = plans.filter(p => {
+            if (p.status === 'paused') return false;
+            const c = calcPlan(p);
+            if (c.remaining <= 0) return false;
+            return Math.min(p.dueDay, 28) === day;
+          });
+
+          html += `
+            <div onclick="window.InstallTrackApp.openCalendarDayModal(${year}, ${month}, ${day})" class="calendar-cell p-1.5 flex flex-col justify-between cursor-pointer rounded-2xl bg-slate-200/60 dark:bg-slate-900/40 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition ${isToday ? 'bg-emerald-500/20 dark:bg-emerald-500/25 ring-2 ring-emerald-500' : ''}">
+              <span class="text-[10px] font-extrabold ${isToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}">${day}</span>
+              <div class="space-y-1 mt-1">
+                ${dayPlans.map(p => {
+                  const c = calcPlan(p);
+                  const isOver = c.nextDueDate < today;
+                  return `
+                    <div class="rounded-xl px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black truncate shadow-xs ${isOver ? 'bg-rose-500 text-white' : 'bg-emerald-600 text-white dark:bg-emerald-400 dark:text-slate-950'}" title="${sanitize(p.name)} - ${money.format(c.monthlyAmount)}">
+                      ${sanitize(p.name)}
+                    </div>`;
+                }).join('')}
+              </div>
+            </div>`;
+        }
+        $('calendar-grid').innerHTML = html;
+      }
+
+      function renderActivity() {
+        const allPayments = [];
+        plans.forEach(p => {
+          p.payments.forEach(pm => {
+            allPayments.push({
+              ...pm,
+              planName: p.name,
+              merchant: p.merchant,
+              planId: p.id
+            });
+          });
+        });
+
+        $('empty-activity').classList.toggle('hidden', allPayments.length > 0);
+
+        if (allPayments.length === 0) {
+          $('activity-timeline').innerHTML = '';
+          return;
+        }
+
+        allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const groups = {};
+        allPayments.forEach(pm => {
+          const d = new Date(pm.date);
+          const key = d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(pm);
+        });
+
+        let html = '';
+        for (const [dateStr, items] of Object.entries(groups)) {
+          html += `
+            <div class="space-y-2">
+              <h3 class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 pl-1">${dateStr}</h3>
+              <div class="space-y-2">
+                ${items.map(item => `
+                  <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <div class="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        <i data-lucide="check-circle" class="h-4 w-4"></i>
+                      </div>
+                      <div>
+                        <h4 class="text-xs font-bold text-slate-900 dark:text-slate-100">${sanitize(item.planName)}</h4>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400">${sanitize(item.merchant)} ${item.note ? '· ' + sanitize(item.note) : ''}</p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">+ ${money.format(item.amount)}</span>
+                      <div class="flex justify-end gap-2 mt-1">
+                        <button onclick="window.InstallTrackApp.openPaymentModal('${item.planId}', '${item.id}')" type="button" class="text-[10px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Edit</button>
+                        <button onclick="window.InstallTrackApp.confirmDeletePayment('${item.planId}', '${item.id}')" type="button" class="text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:underline">Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>`;
+        }
+
+        $('activity-timeline').innerHTML = html;
+        lucide.createIcons();
+      }
+
+      function openModal(planId = null) {
+        const p = plans.find(x => x.id === planId);
+        
+        closeDetailModal();
+
+        $('modal').classList.remove('hidden');
+        $('modal').classList.add('flex');
+        $('plan-form').reset();
+        receiptData = '';
+        productData = '';
+
+        $('modal-title').textContent = p ? 'Edit Installment Plan' : 'New Installment Plan';
+        $('plan-id').value = p?.id || '';
+        $('plan-name').value = p?.name || '';
+        $('merchant').value = p?.merchant || '';
+        $('amount').value = p?.amount || '';
+        $('tenure').value = p?.tenure || 12;
+        $('start-date').value = p?.startDate || new Date().toISOString().slice(0, 10);
+        $('due-day').value = p?.dueDay || 15;
+        $('status').value = p?.status || 'active';
+        receiptData = p?.receipt || '';
+        productData = p?.productImage || '';
+
+        if (receiptData) {
+          $('receipt-preview').src = receiptData;
+          $('receipt-container').classList.remove('hidden');
+        } else {
+          $('receipt-container').classList.add('hidden');
+        }
+
+        if (productData) {
+          $('product-preview').src = productData;
+          $('product-container').classList.remove('hidden');
+        } else {
+          $('product-container').classList.add('hidden');
+        }
+
+        calcFormEstimates();
+        lucide.createIcons();
+      }
+
+      function closeModal() {
+        $('modal').classList.add('hidden');
+        $('modal').classList.remove('flex');
+        $('merchant-suggestions').classList.add('hidden');
+      }
+
+      function calcFormEstimates() {
+        const amount = Number($('amount').value) || 0;
+        const tenure = Math.max(1, Number($('tenure').value) || 1);
+        const planId = $('plan-id').value;
+
+        const existingPlan = plans.find(p => p.id === planId);
+        const totalPaid = existingPlan ? existingPlan.payments.reduce((sum, item) => sum + Number(item.amount), 0) : 0;
+
+        const monthlyVal = amount / tenure;
+        const remainingVal = Math.max(0, amount - totalPaid);
+
+        $('monthly-result').textContent = money.format(monthlyVal);
+        $('remaining-result').textContent = money.format(remainingVal);
+      }
+
+      function openDetailModal(planId) {
+        activeDetailPlanId = planId;
+        const p = plans.find(x => x.id === planId);
+        if (!p) return;
+
+        const c = calcPlan(p);
+        $('detail-plan-name').textContent = p.name;
+
+        $('detail-content').innerHTML = `
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-2xl p-4 bg-slate-200/60 dark:bg-slate-800/40">
+            <div>
+              <p class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Merchant</p>
+              <p class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">${sanitize(p.merchant)}</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Total Commitment</p>
+              <p class="text-xs font-bold text-slate-900 dark:text-slate-100">${money.format(c.totalAmount)}</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Total Paid</p>
+              <p class="text-xs font-bold text-emerald-600 dark:text-emerald-400">${money.format(c.totalPaid)}</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Remaining</p>
+              <p class="text-xs font-extrabold text-slate-900 dark:text-slate-100">${money.format(c.remaining)}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
+            <span>Payment Progress (${c.progressPercent}%)</span>
+            <span>Next due: ${c.nextDueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          </div>
+
+          <div class="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+            <div class="h-full rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-500" style="width:${c.progressPercent}%"></div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-extrabold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Ledger (${p.payments.length})</h4>
+              <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}')" type="button" class="rounded-2xl px-3 py-1.5 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-400 dark:text-slate-950 dark:hover:bg-emerald-300 shadow-sm transition ${c.remaining <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${c.remaining <= 0 ? 'disabled' : ''}>+ Add Payment</button>
+            </div>
+
+            <div class="space-y-2 max-h-48 overflow-y-auto pr-1 no-scrollbar">
+              ${p.payments.length ? p.payments.sort((a,b) => new Date(b.date) - new Date(a.date)).map(pm => `
+                <div class="flex items-center justify-between rounded-2xl p-3 text-xs bg-slate-200/50 dark:bg-slate-800/30">
+                  <div>
+                    <span class="font-bold text-slate-900 dark:text-slate-100">${money.format(pm.amount)}</span>
+                    <span class="ml-2 text-[10px] text-slate-500 dark:text-slate-400">${new Date(pm.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    ${pm.note ? `<p class="text-[10px] text-slate-500 dark:text-slate-400 italic">${sanitize(pm.note)}</p>` : ''}
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button onclick="window.InstallTrackApp.openPaymentModal('${p.id}', '${pm.id}')" type="button" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Edit</button>
+                    <button onclick="window.InstallTrackApp.confirmDeletePayment('${p.id}', '${pm.id}')" type="button" class="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline">Delete</button>
+                  </div>
+                </div>
+              `).join('') : '<p class="text-xs font-medium py-4 text-center text-slate-500 dark:text-slate-400">No payment records logged yet.</p>'}
+            </div>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            ${p.productImage ? `
+              <div>
+                <h4 class="font-extrabold text-xs uppercase tracking-wider mb-2 text-slate-500 dark:text-slate-400">Product Photo</h4>
+                <img src="${p.productImage}" alt="Product image" class="max-h-40 w-full rounded-2xl object-cover">
+              </div>
+            ` : ''}
+
+            ${p.receipt ? `
+              <div>
+                <h4 class="font-extrabold text-xs uppercase tracking-wider mb-2 text-slate-500 dark:text-slate-400">Attached Receipt</h4>
+                <img src="${p.receipt}" alt="Receipt image" class="max-h-40 w-full rounded-2xl object-cover">
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-200/60 dark:border-slate-800">
+            <button onclick="window.InstallTrackApp.confirmDeletePlan('${p.id}')" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition">
+              <i data-lucide="trash-2" class="h-4 w-4"></i> Delete Plan
+            </button>
+            <div class="flex items-center gap-2">
+              <button onclick="window.InstallTrackApp.openModal('${p.id}')" type="button" class="inline-flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 transition">
+                <i data-lucide="edit-3" class="h-4 w-4"></i> Edit Plan
+              </button>
+              <button onclick="window.InstallTrackApp.closeDetailModal()" type="button" class="rounded-2xl px-4 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 transition">Close</button>
+            </div>
+          </div>
+        `;
+
+        $('detail-modal').classList.remove('hidden');
+        $('detail-modal').classList.add('flex');
+        lucide.createIcons();
+      }
+
+      function closeDetailModal() {
+        $('detail-modal').classList.add('hidden');
+        $('detail-modal').classList.remove('flex');
+        activeDetailPlanId = null;
+      }
+
+      function openPaymentModal(planId, paymentId = null) {
+        const p = plans.find(x => x.id === planId);
+        if (!p) return;
+
+        const c = calcPlan(p);
+        const existingPayment = paymentId ? p.payments.find(x => x.id === paymentId) : null;
+
+        $('payment-plan-id').value = planId;
+        $('payment-entry-id').value = paymentId || '';
+        $('payment-modal-title').textContent = paymentId ? 'Edit Payment Entry' : 'Record Payment';
+
+        $('payment-amount').value = existingPayment ? existingPayment.amount : Math.min(c.remaining, Math.round(c.monthlyAmount * 100) / 100);
+        $('payment-date').value = existingPayment ? existingPayment.date : new Date().toISOString().slice(0, 10);
+        $('payment-note').value = existingPayment ? (existingPayment.note || '') : '';
+
+        $('payment-current-remaining').textContent = money.format(c.remaining + (existingPayment ? existingPayment.amount : 0));
+        updatePaymentAfterCalculation();
+
+        $('payment-modal').classList.remove('hidden');
+        $('payment-modal').classList.add('flex');
+      }
+
+      function closePaymentModal() {
+        $('payment-modal').classList.add('hidden');
+        $('payment-modal').classList.remove('flex');
+      }
+
+      function updatePaymentAfterCalculation() {
+        const planId = $('payment-plan-id').value;
+        const paymentId = $('payment-entry-id').value;
+        const p = plans.find(x => x.id === planId);
+        if (!p) return;
+
+        const c = calcPlan(p);
+        const existingPayment = paymentId ? p.payments.find(x => x.id === paymentId) : null;
+        const effectiveRemaining = c.remaining + (existingPayment ? existingPayment.amount : 0);
+
+        const inputAmt = Number($('payment-amount').value) || 0;
+        const afterRemaining = Math.max(0, effectiveRemaining - inputAmt);
+
+        $('payment-after-remaining').textContent = money.format(afterRemaining);
+      }
+
+      function openCalendarDayModal(year, month, day) {
+        const targetDate = new Date(year, month, day);
+        const dayPlans = plans.filter(p => p.status !== 'paused' && Math.min(p.dueDay, 28) === day);
+
+        $('calendar-day-title').textContent = targetDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        $('calendar-day-list').innerHTML = dayPlans.length ? dayPlans.map(p => {
+          const c = calcPlan(p);
+          return `
+            <div class="flex items-center justify-between rounded-2xl p-3 bg-slate-200/50 dark:bg-slate-900/40">
+              <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                ${p.productImage ? `<img src="${p.productImage}" class="h-8 w-8 rounded-xl object-cover shrink-0" alt="product">` : ''}
+                <div class="min-w-0">
+                  <b class="text-xs font-bold text-slate-900 dark:text-slate-100 block truncate">${sanitize(p.name)}</b>
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400">Monthly: ${money.format(c.monthlyAmount)}</p>
+                </div>
+              </div>
+              <button onclick="window.InstallTrackApp.closeCalendarDayModal(); window.InstallTrackApp.openDetailModal('${p.id}')" type="button" class="shrink-0 rounded-xl px-3 py-1.5 text-xs font-extrabold text-white bg-emerald-600 dark:bg-emerald-400 dark:text-slate-950">View Plan</button>
+            </div>
+          `;
+        }).join('') : '<p class="text-xs font-medium py-4 text-center text-slate-500 dark:text-slate-400">No installments due on this date.</p>';
+
+        $('calendar-day-modal').classList.remove('hidden');
+        $('calendar-day-modal').classList.add('flex');
+      }
+
+      function closeCalendarDayModal() {
+        $('calendar-day-modal').classList.add('hidden');
+        $('calendar-day-modal').classList.remove('flex');
+      }
+
+      function toast(msg) {
+        $('toast').textContent = msg;
+        $('toast').classList.add('show');
+        setTimeout(() => $('toast').classList.remove('show'), 2800);
+      }
+
+      function showConfirm(title, msg, onConfirm) {
+        $('confirm-modal-title').textContent = title;
+        $('confirm-modal-msg').textContent = msg;
+        $('confirm-modal').classList.remove('hidden');
+        $('confirm-modal').classList.add('flex');
+
+        const handleAction = () => {
+          onConfirm();
+          closeConfirm();
+        };
+
+        const closeConfirm = () => {
+          $('confirm-modal').classList.add('hidden');
+          $('confirm-modal').classList.remove('flex');
+          $('confirm-modal-action').removeEventListener('click', handleAction);
+        };
+
+        $('confirm-modal-action').onclick = handleAction;
+        $('confirm-modal-cancel').onclick = closeConfirm;
+      }
+
+      function confirmDeletePlan(planId) {
+        showConfirm('Delete Installment Plan?', 'This plan and all associated payment entries will be erased.', () => {
+          plans = plans.filter(p => p.id !== planId);
+          saveData();
+          closeDetailModal();
+          switchView(currentView);
+          toast('Plan successfully deleted.');
+        });
+      }
+
+      function confirmDeletePayment(planId, paymentId) {
+        showConfirm('Delete Payment Entry?', 'This payment entry will be removed and balances recalculated.', () => {
+          const p = plans.find(x => x.id === planId);
+          if (p) {
+            p.payments = p.payments.filter(x => x.id !== paymentId);
+            saveData();
+            switchView(currentView);
+            if (activeDetailPlanId === planId) openDetailModal(planId);
+            toast('Payment entry erased.');
+          }
+        });
+      }
+
+      function setupEventListeners() {
+        ['modal', 'detail-modal', 'payment-modal', 'calendar-day-modal', 'confirm-modal'].forEach(id => {
+          const backdrop = $(id);
+          if (backdrop) {
+            backdrop.addEventListener('click', e => {
+              if (e.target === backdrop) {
+                if (id === 'modal') closeModal();
+                else if (id === 'detail-modal') closeDetailModal();
+                else if (id === 'payment-modal') closePaymentModal();
+                else if (id === 'calendar-day-modal') closeCalendarDayModal();
+                else if (id === 'confirm-modal') {
+                  backdrop.classList.add('hidden');
+                  backdrop.classList.remove('flex');
+                }
+              }
+            });
+          }
+        });
+
+        document.addEventListener('click', e => {
+          const merchantInput = $('merchant');
+          const suggestionsBox = $('merchant-suggestions');
+          if (merchantInput && suggestionsBox && !merchantInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.classList.add('hidden');
+          }
+        });
+
+        $('merchant').addEventListener('focus', showLenderSuggestions);
+        $('merchant').addEventListener('input', showLenderSuggestions);
+
+        $('plan-form').addEventListener('submit', e => {
+          e.preventDefault();
+          const id = $('plan-id').value;
+          const existing = plans.find(p => p.id === id);
+
+          const newObj = {
+            id: id || 'plan_' + Date.now(),
+            name: $('plan-name').value.trim(),
+            merchant: $('merchant').value.trim(),
+            amount: Number($('amount').value),
+            tenure: Number($('tenure').value),
+            startDate: $('start-date').value,
+            dueDay: Number($('due-day').value),
+            status: $('status').value,
+            receipt: receiptData,
+            productImage: productData,
+            payments: existing ? existing.payments : []
+          };
+
+          if (id) {
+            plans = plans.map(p => p.id === id ? newObj : p);
+          } else {
+            plans.push(newObj);
+          }
+
+          saveData();
+          closeModal();
+          switchView(currentView);
+          toast(id ? 'Plan updated successfully.' : 'New plan created.');
+        });
+
+        $('payment-form').addEventListener('submit', e => {
+          e.preventDefault();
+          const planId = $('payment-plan-id').value;
+          const entryId = $('payment-entry-id').value;
+          const amt = Number($('payment-amount').value);
+          const dateVal = $('payment-date').value;
+          const noteVal = $('payment-note').value.trim();
+
+          const p = plans.find(x => x.id === planId);
+          if (!p) return;
+
+          if (entryId) {
+            p.payments = p.payments.map(x => x.id === entryId ? { id: entryId, amount: amt, date: dateVal, note: noteVal } : x);
+          } else {
+            p.payments.push({
+              id: 'pm_' + Date.now(),
+              amount: amt,
+              date: dateVal,
+              note: noteVal
+            });
+          }
+
+          saveData();
+          closePaymentModal();
+          switchView(currentView);
+          if (activeDetailPlanId === planId) openDetailModal(planId);
+          toast('Payment recorded.');
+        });
+
+        ['amount', 'tenure'].forEach(id => $(id).addEventListener('input', calcFormEstimates));
+        $('payment-amount').addEventListener('input', updatePaymentAfterCalculation);
+
+        $('product-upload').addEventListener('change', e => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const scale = Math.min(1, 800 / img.width);
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              productData = canvas.toDataURL('image/jpeg', 0.75);
+              $('product-preview').src = productData;
+              $('product-container').classList.remove('hidden');
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+
+        $('remove-product').onclick = () => {
+          productData = '';
+          $('product-preview').src = '';
+          $('product-container').classList.add('hidden');
+          $('product-upload').value = '';
+        };
+
+        $('receipt-upload').addEventListener('change', e => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const scale = Math.min(1, 800 / img.width);
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              receiptData = canvas.toDataURL('image/jpeg', 0.75);
+              $('receipt-preview').src = receiptData;
+              $('receipt-container').classList.remove('hidden');
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+
+        $('remove-receipt').onclick = () => {
+          receiptData = '';
+          $('receipt-preview').src = '';
+          $('receipt-container').classList.add('hidden');
+          $('receipt-upload').value = '';
+        };
+
+        $('close-modal').onclick = closeModal;
+        $('close-detail-modal').onclick = closeDetailModal;
+        $('close-payment-modal').onclick = closePaymentModal;
+        $('close-calendar-day-modal').onclick = closeCalendarDayModal;
+
+        window.addEventListener('keydown', e => {
+          if (e.key === 'Escape') {
+            closeModal();
+            closeDetailModal();
+            closePaymentModal();
+            closeCalendarDayModal();
+          }
+        });
+
+        ['search-input', 'filter-select', 'sort-select'].forEach(id => $(id).addEventListener('input', renderPlans));
+
+        document.querySelectorAll('.layout-btn').forEach(btn => {
+          btn.onclick = () => {
+            layoutMode = btn.dataset.layout;
+            document.querySelectorAll('.layout-btn').forEach(x => {
+              const isActive = x === btn;
+              x.classList.toggle('text-emerald-600', isActive);
+              x.classList.toggle('dark:text-emerald-400', isActive);
+              x.classList.toggle('bg-emerald-500/15', isActive);
+              x.classList.toggle('text-slate-500', !isActive);
+              x.classList.toggle('dark:text-slate-400', !isActive);
+            });
+            renderPlans();
+          };
+        });
+
+        $('prev-month').onclick = () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); };
+        $('next-month').onclick = () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); };
+        $('today-month').onclick = () => { calendarDate = new Date(); renderCalendar(); };
+
+        const toggleTheme = () => {
+          const isDark = document.body.classList.toggle('dark');
+          localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+
+          const thumb = $('theme-switch-thumb');
+          if (thumb) {
+            thumb.classList.toggle('translate-x-5', isDark);
+            thumb.classList.toggle('translate-x-0', !isDark);
+          }
+        };
+
+        $('theme-toggle').onclick = toggleTheme;
+        $('theme-switch-btn').onclick = toggleTheme;
+
+        $('export-btn').onclick = () => {
+          const blob = new Blob([JSON.stringify(plans, null, 2)], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `installtrack-export-${new Date().toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          toast('Data successfully exported.');
+        };
+
+        $('import-file').addEventListener('change', e => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const data = JSON.parse(reader.result);
+              if (!Array.isArray(data)) throw new Error('Invalid schema');
+
+              showConfirm('Import & Overwrite Data?', 'Importing will replace your existing local installment records.', () => {
+                plans = migrateData(data);
+                saveData();
+                switchView(currentView);
+                toast('Data successfully imported.');
+              });
+            } catch (err) {
+              toast('Invalid JSON file format.');
+            }
+          };
+          reader.readAsText(file);
+          e.target.value = '';
+        });
+
+        $('clear-btn').onclick = () => {
+          showConfirm('Clear All Storage Data?', 'All installment records and payment histories will be permanently wiped.', () => {
+            plans = [];
+            saveData();
+            switchView(currentView);
+            toast('All local data cleared.');
+          });
+        };
+      }
+
+      function init() {
+        if (localStorage.getItem(THEME_KEY) === 'light') {
+          document.body.classList.remove('dark');
+          const thumb = $('theme-switch-thumb');
+          if (thumb) {
+            thumb.classList.remove('translate-x-5');
+            thumb.classList.add('translate-x-0');
+          }
+        }
+        loadData();
+        setupEventListeners();
+        switchView('home');
+        lucide.createIcons();
+
+        window.InstallTrackApp = {
+          switchView,
+          openModal,
+          closeModal,
+          openDetailModal,
+          closeDetailModal,
+          openPaymentModal,
+          confirmDeletePlan,
+          confirmDeletePayment,
+          openCalendarDayModal,
+          closeCalendarDayModal
+        };
+      }
+
+      init();
+    })();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker Registered:', reg.scope))
+          .catch((err) => console.error('Service Worker Registration Failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
